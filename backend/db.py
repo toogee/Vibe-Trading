@@ -48,3 +48,13 @@ def update_mt5_status(account_id: str, status: str):
         supabase.table("mt5_accounts").update({"status": status}).eq("id", account_id).execute()
     except Exception as e:
         logging.error(f"Error updating MT5 status for account {account_id}: {e}")
+
+def update_mt5_balance(account_id: str, balance: float, equity: float):
+    """Updates the balance and equity of the MT5 account in the DB."""
+    try:
+        supabase.table("mt5_accounts").update({
+            "balance": balance,
+            "equity": equity
+        }).eq("id", account_id).execute()
+    except Exception as e:
+        logging.error(f"Error updating balance for account {account_id}: {e}")
