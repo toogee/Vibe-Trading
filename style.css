@@ -1109,4 +1109,8 @@ header.scrolled {
     .section {
         padding: 4rem 0;
     }
+
+    .hero {
+        padding-top: 9rem; /* Push content below sticky navbar on mobile */
+    }
 }
