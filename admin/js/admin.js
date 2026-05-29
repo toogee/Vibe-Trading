@@ -297,25 +297,83 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Custom Confirm Modal Logic
+    function showConfirmModal(title, text, confirmText, type, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        const modalContent = document.getElementById('confirmModalContent');
+        const titleEl = document.getElementById('confirmModalTitle');
+        const textEl = document.getElementById('confirmModalText');
+        const confirmBtn = document.getElementById('confirmModalConfirm');
+        const cancelBtn = document.getElementById('confirmModalCancel');
+        const iconBg = document.getElementById('confirmModalIconBg');
+
+        titleEl.innerText = title;
+        textEl.innerText = text;
+        confirmBtn.innerText = confirmText;
+
+        // Reset classes
+        iconBg.className = 'w-10 h-10 rounded-full flex items-center justify-center';
+        confirmBtn.className = 'px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-lg hover:shadow-none';
+
+        if(type === 'approve') {
+            iconBg.classList.add('bg-emerald-500/20', 'text-emerald-400');
+            confirmBtn.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-teal-500', 'shadow-emerald-500/25');
+        } else {
+            iconBg.classList.add('bg-rose-500/20', 'text-rose-400');
+            confirmBtn.classList.add('bg-gradient-to-r', 'from-rose-500', 'to-red-500', 'shadow-rose-500/25');
+        }
+
+        modal.classList.remove('hidden');
+        // Trigger animation
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        const closeModal = () => {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        };
+
+        cancelBtn.onclick = () => {
+            closeModal();
+        };
+
+        confirmBtn.onclick = () => {
+            closeModal();
+            onConfirm();
+        };
+    }
+
     // Export function to global scope so onclick handlers can access it
     window.updatePaymentStatus = async function(paymentId, newStatus) {
-        if(!confirm(`Êtes-vous sûr de vouloir ${newStatus === 'ACTIVE' ? 'APPROUVER' : 'REJETER'} ce paiement ?`)) return;
+        const actionText = newStatus === 'ACTIVE' ? 'APPROUVER' : 'REJETER';
+        const type = newStatus === 'ACTIVE' ? 'approve' : 'reject';
 
-        try {
-            const { error } = await supabaseClient
-                .from('subscriptions')
-                .update({ status: newStatus, updated_at: new Date().toISOString() })
-                .eq('id', paymentId);
+        showConfirmModal(
+            `${actionText} LE PAIEMENT`,
+            `Êtes-vous sûr de vouloir ${actionText.toLowerCase()} ce paiement ? Cette action modifiera le statut de l'utilisateur.`,
+            `Oui, ${actionText}`,
+            type,
+            async () => {
+                try {
+                    const { error } = await supabaseClient
+                        .from('subscriptions')
+                        .update({ status: newStatus, updated_at: new Date().toISOString() })
+                        .eq('id', paymentId);
 
-            if(error) throw error;
-            
-            // Reload table
-            loadPayments();
-            
-        } catch (err) {
-            console.error("Update Error:", err);
-            alert("Erreur lors de la mise à jour: " + err.message);
-        }
+                    if(error) throw error;
+                    
+                    // Reload table
+                    loadPayments();
+                    
+                } catch (err) {
+                    console.error("Update Error:", err);
+                    alert("Erreur lors de la mise à jour: " + err.message);
+                }
+            }
+        );
     };
 
     // --- 8. LOGOUT ---

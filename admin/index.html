@@ -471,6 +471,22 @@
 
         </div>
     </main>
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-slate-950/80 backdrop-blur-sm">
+        <div class="admin-glass w-full max-w-sm rounded-2xl p-6 transform scale-95 opacity-0 transition-all duration-200" id="confirmModalContent">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" id="confirmModalIconBg">
+                    <i data-lucide="alert-triangle" class="w-5 h-5" id="confirmModalIcon"></i>
+                </div>
+                <h3 class="text-xl font-bold font-heading text-white" id="confirmModalTitle">Confirmer</h3>
+            </div>
+            <p class="text-slate-300 text-sm mb-6" id="confirmModalText">Êtes-vous sûr ?</p>
+            <div class="flex gap-3 justify-end">
+                <button id="confirmModalCancel" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">Annuler</button>
+                <button id="confirmModalConfirm" class="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-lg hover:shadow-none"></button>
+            </div>
+        </div>
+    </div>
 
     <!-- Supabase Config & Main Admin Logic -->
     <script src="../supabaseClient.js"></script>
