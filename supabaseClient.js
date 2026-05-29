@@ -4,7 +4,7 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 // Initialisation du client Supabase
 // (Nous utilisons le client global ajouté via CDN dans les fichiers HTML)
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // Vous pouvez utiliser 'supabase' pour faire des requêtes depuis les autres scripts
 console.log('✅ Supabase connecté avec succès !');
