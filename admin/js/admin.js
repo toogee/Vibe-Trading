@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td class="font-mono text-sky-400 text-xs">${payment.id.split('-')[0]}...</td>
                     <td class="font-bold text-white">${payment.plan_name}</td>
                     <td>
-                        <button class="text-sky-400 hover:text-white transition-colors text-xs flex items-center gap-1 bg-sky-500/10 px-2 py-1 rounded">
+                        <button onclick="alert('Fichier reçu : ${payment.payment_proof_url}\\n\\n(Mode Démo : Le fichier n\\'a pas été physiquement uploadé car le Storage Supabase n\\'est pas encore configuré. Seul le nom du fichier a été sauvegardé.)')" class="text-sky-400 hover:text-white transition-colors text-xs flex items-center gap-1 bg-sky-500/10 px-2 py-1 rounded">
                             <i data-lucide="image" class="w-3 h-3"></i> View Proof
                         </button>
                     </td>
