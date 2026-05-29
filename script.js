@@ -63,4 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
             navbar.classList.remove('scrolled');
         }
     });
+
+    // 4. Mobile Menu Toggle
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const navLinks = document.querySelector('.nav-links');
+    
+    if (menuBtn && navLinks) {
+        menuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+        
+        // Close menu when clicking a link
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+            });
+        });
+    }
 });

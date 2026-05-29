@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Trading - Connexion</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617; /* slate-950 */
+            color: #f8fafc;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Animated Blobs Background */
+        .bg-blobs {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(100px);
+            border-radius: 50%;
+            animation: float 20s infinite alternate ease-in-out;
+            opacity: 0.4;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 600px; height: 600px; background: #0ea5e9; }
+        .blob-2 { bottom: -20%; right: -10%; width: 700px; height: 700px; background: #2563eb; animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; background: #3b82f6; animation-delay: -10s; opacity: 0.2; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 30px) scale(1.1); }
+            100% { transform: translate(-30px, -50px) scale(0.9); }
+        }
+
+        /* Tiny candlestick glow effects in background */
+        .candlestick {
+            position: absolute;
+            width: 4px;
+            background: rgba(52, 211, 153, 0.2); /* green-400 */
+            box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+            border-radius: 2px;
+            animation: flicker 4s infinite alternate;
+        }
+        .candlestick.red {
+            background: rgba(248, 113, 113, 0.2); /* red-400 */
+            box-shadow: 0 0 10px rgba(248, 113, 113, 0.4);
+        }
+        @keyframes flicker {
+            0% { opacity: 0.3; height: 20px; }
+            50% { opacity: 0.8; height: 40px; }
+            100% { opacity: 0.5; height: 30px; }
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.15);
+            animation: cardFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @keyframes cardFadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Inputs */
+        .input-group { position: relative; }
+        .input-field {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            transition: color 0.3s ease;
+            pointer-events: none;
+        }
+        .input-group:focus-within .input-icon { color: #38bdf8; }
+
+        /* Custom Checkbox */
+        .custom-checkbox input:checked + div {
+            background-color: #0ea5e9;
+            border-color: #0ea5e9;
+        }
+        .custom-checkbox input:checked + div svg { transform: scale(1); }
+        .custom-checkbox div svg { transform: scale(0); transition: transform 0.2s ease; }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(to right, #0ea5e9, #2563eb);
+            color: white;
+            font-weight: 600;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-social {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        .btn-social:hover { background: rgba(51, 65, 85, 0.8); }
+
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-8">
+
+    <!-- Background -->
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <!-- Trading particles -->
+        <div class="candlestick" style="top: 20%; left: 15%; animation-delay: 0s;"></div>
+        <div class="candlestick red" style="top: 60%; left: 80%; animation-delay: 1s;"></div>
+        <div class="candlestick" style="top: 80%; left: 30%; animation-delay: 2s;"></div>
+        <div class="candlestick red" style="top: 30%; left: 70%; animation-delay: 0.5s;"></div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="w-full max-w-[480px] z-10">
+        <div class="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+            <!-- Glare effect -->
+            <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"></div>
+
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div class="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-sky-500/30">
+                    <i data-lucide="activity" class="text-white w-8 h-8"></i>
+                </div>
+                <h1 class="font-heading text-3xl font-bold mb-3 tracking-tight">Content de vous revoir</h1>
+                <p class="text-slate-400 text-sm max-w-[85%] mx-auto leading-relaxed">
+                    Connectez-vous pour accéder à votre dashboard de trading en direct sur le GBPUSD.
+                </p>
+            </div>
+
+            <!-- Form -->
+            <form id="loginForm" class="space-y-6">
+                <!-- Email -->
+                <div class="input-group">
+                    <i data-lucide="mail" class="w-5 h-5 input-icon"></i>
+                    <input type="email" id="email" placeholder="Adresse Email" required class="input-field">
+                </div>
+
+                <!-- Password -->
+                <div class="space-y-2">
+                    <div class="input-group">
+                        <i data-lucide="lock" class="w-5 h-5 input-icon"></i>
+                        <input type="password" id="password" placeholder="Mot de passe" required class="input-field pr-12">
+                        <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-400 transition-colors">
+                            <i data-lucide="eye" class="w-5 h-5" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember & Forgot -->
+                <div class="flex items-center justify-between">
+                    <label class="custom-checkbox flex items-center gap-2 cursor-pointer group">
+                        <div class="relative">
+                            <input type="checkbox" id="remember" class="sr-only">
+                            <div class="w-4 h-4 border-2 border-slate-600 rounded bg-slate-800/50 flex items-center justify-center transition-colors">
+                                <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                            </div>
+                        </div>
+                        <span class="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">Se souvenir de moi</span>
+                    </label>
+
+                    <a href="#" class="text-sm text-sky-400 font-medium hover:text-sky-300 hover:underline underline-offset-4 transition-all">
+                        Mot de passe oublié ?
+                    </a>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="btn-primary mt-6 group">
+                    <span id="btnText" class="flex items-center gap-2">
+                        Se Connecter
+                        <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                    </span>
+                    <i data-lucide="loader-2" id="spinner" class="w-5 h-5 animate-spin hidden"></i>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-4 my-8">
+                <div class="h-px bg-slate-700/50 flex-1"></div>
+                <span class="text-slate-500 text-xs font-semibold tracking-wider">OU CONTINUER AVEC</span>
+                <div class="h-px bg-slate-700/50 flex-1"></div>
+            </div>
+
+            <!-- Social Auth -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button type="button" class="btn-social">
+                    <!-- Google SVG -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    <span>Google</span>
+                </button>
+                <button type="button" class="btn-social">
+                    <!-- Apple SVG -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16.59 10.74c-.03-2.65 2.18-3.95 2.27-4.01-1.23-1.8-3.13-2.05-3.83-2.08-1.63-.16-3.18.96-4.01.96-.82 0-2.12-.94-3.48-.92-1.78.02-3.42 1.03-4.33 2.63-1.85 3.2-.47 7.94 1.34 10.55.88 1.28 1.92 2.72 3.29 2.67 1.32-.05 1.83-.85 3.43-.85 1.58 0 2.07.85 3.45.82 1.4-.03 2.31-1.31 3.19-2.58 1.02-1.49 1.44-2.93 1.46-3-.03-.02-2.75-1.05-2.78-4.14zM14.65 3.43c.72-.88 1.2-2.09 1.07-3.32-1.06.04-2.33.71-3.07 1.6-.66.78-1.24 2.02-1.08 3.22 1.18.09 2.37-.62 3.08-1.5z" />
+                    </svg>
+                    <span>Apple</span>
+                </button>
+            </div>
+
+            <!-- Signup Link -->
+            <div class="mt-8 text-center text-sm text-slate-400">
+                Vous n'avez pas de compte ?
+                <a href="signup.html" class="text-sky-400 font-semibold hover:text-sky-300 hover:underline underline-offset-4 transition-all relative inline-block group-hover:after:w-full">
+                    Créer un Compte
+                </a>
+            </div>
+
+            <!-- Link back to home -->
+            <div class="mt-4 text-center">
+                <a href="index.html" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                    &larr; Retour à l'accueil
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Elements
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const loginForm = document.getElementById('loginForm');
+
+        // Toggle Password Visibility
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            eyeIcon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        });
+
+        // Form Validation (Basic empty check before enabling full button)
+        function checkFormValidity() {
+            if (emailInput.value.length > 0 && passwordInput.value.length > 0) {
+                submitBtn.removeAttribute('disabled');
+            } else {
+                submitBtn.setAttribute('disabled', 'true');
+            }
+        }
+
+        emailInput.addEventListener('input', checkFormValidity);
+        passwordInput.addEventListener('input', checkFormValidity);
+        // Initial check
+        checkFormValidity();
+
+        // Submit Animation
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            submitBtn.disabled = true;
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('spinner').classList.remove('hidden');
+
+            // Simulate API Call
+            setTimeout(() => {
+                // Redirect to dashboard
+                window.location.href = 'dashboard.html';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
