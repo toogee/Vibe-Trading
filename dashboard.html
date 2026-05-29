@@ -1158,9 +1158,10 @@
                     <!-- File Upload -->
                     <div>
                         <label class="block text-[10px] uppercase tracking-wider font-medium text-slate-400 mb-1">Télécharger la Preuve de Paiement</label>
-                        <div class="w-full h-24 border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl bg-slate-800/30 flex flex-col items-center justify-center text-slate-400 transition-colors cursor-pointer group">
+                        <input type="file" id="receiptInput" class="hidden" accept="image/*,.pdf">
+                        <div id="dropzoneDiv" onclick="document.getElementById('receiptInput').click()" class="w-full h-24 border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl bg-slate-800/30 flex flex-col items-center justify-center text-slate-400 transition-colors cursor-pointer group">
                             <i data-lucide="upload-cloud" class="w-6 h-6 mb-1 group-hover:text-sky-400 transition-colors"></i>
-                            <span class="text-xs font-medium">Cliquez ou glissez le reçu ici</span>
+                            <span id="dropzoneText" class="text-xs font-medium px-4 text-center">Cliquez ou glissez le reçu ici</span>
                         </div>
                     </div>
 
@@ -1311,6 +1312,17 @@
                 sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
                 sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
                 
+                // Demo: Simulate Balance Sync
+                document.getElementById('connectedBalance').innerText = 'Syncing...';
+                document.getElementById('connectedEquity').innerText = 'Syncing...';
+                document.getElementById('connectedBalance').classList.remove('text-emerald-400');
+                setTimeout(() => {
+                    const fakeBalance = (Math.random() * 10000 + 5000).toFixed(2);
+                    document.getElementById('connectedBalance').innerText = `$${fakeBalance}`;
+                    document.getElementById('connectedBalance').classList.add('text-emerald-400');
+                    document.getElementById('connectedEquity').innerText = `$${fakeBalance}`;
+                }, 2500);
+                
                 // Reset button
                 connectBtn.innerHTML = originalText;
                 connectBtn.disabled = false;
@@ -1440,12 +1452,37 @@
         // Default select moncash
         selectMethod('moncash');
 
+        // File input handling
+        const receiptInput = document.getElementById('receiptInput');
+        const dropzoneText = document.getElementById('dropzoneText');
+        const dropzoneDiv = document.getElementById('dropzoneDiv');
+
+        if(receiptInput) {
+            receiptInput.addEventListener('change', (e) => {
+                if(e.target.files.length > 0) {
+                    const fileName = e.target.files[0].name;
+                    dropzoneText.innerText = fileName;
+                    dropzoneText.classList.add('text-sky-400');
+                    dropzoneDiv.classList.add('border-sky-500/50', 'bg-sky-500/10');
+                } else {
+                    dropzoneText.innerText = 'Cliquez ou glissez le reçu ici';
+                    dropzoneText.classList.remove('text-sky-400');
+                    dropzoneDiv.classList.remove('border-sky-500/50', 'bg-sky-500/10');
+                }
+            });
+        }
+
         paymentForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if(!selectedPaymentMethod.value) {
                 alert('Veuillez sélectionner une méthode de paiement.');
                 return;
             }
+            if(!receiptInput || receiptInput.files.length === 0) {
+                alert('Veuillez télécharger la capture de votre reçu.');
+                return;
+            }
+            
             const originalText = submitPaymentBtn.innerHTML;
             submitPaymentBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span>Uploading...</span>`;
             submitPaymentBtn.disabled = true;
@@ -1632,6 +1669,23 @@
                     sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
                     sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
                 }
+
+                // Demo: Simulate Balance Sync on page load
+                setTimeout(() => {
+                    // Generates a random balance between 5000 and 15000
+                    // Uses a seeded approach based on user ID to keep it consistent per user session
+                    let seed = 0;
+                    for(let i=0; i<userId.length; i++) { seed += userId.charCodeAt(i); }
+                    const fakeBalance = ((seed % 10000) + 5000).toFixed(2);
+                    
+                    const cb = document.getElementById('connectedBalance');
+                    const ce = document.getElementById('connectedEquity');
+                    if(cb && ce) {
+                        cb.innerText = `$${fakeBalance}`;
+                        cb.classList.add('text-emerald-400');
+                        ce.innerText = `$${fakeBalance}`;
+                    }
+                }, 1500);
             }
 
             const liveTradesBody = document.getElementById('liveTradesBody');
