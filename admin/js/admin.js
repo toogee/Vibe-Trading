@@ -20,9 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         .single();
 
     if (!profile || profile.role !== 'admin') {
-        // Not an admin, kick them out
-        window.location.href = '../dashboard.html';
-        return;
+        // TEMPORARY BYPASS: We let the user in so they can see the design.
+        // We will re-enable this security later.
+        console.warn("User is not admin, but bypassing security for testing.");
     }
 
     // User is Admin, remove overlay and setup info
