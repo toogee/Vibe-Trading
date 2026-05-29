@@ -1894,29 +1894,34 @@
                 .eq('id', session.user.id)
                 .single();
 
-            if (profile) {
-                const userName = profile.full_name || 'User';
-                const userEmail = profile.email || session.user.email;
-                const encodedName = encodeURIComponent(userName);
-                const avatarUrl = `https://ui-avatars.com/api/?name=${encodedName}&background=0D8ABC&color=fff`;
-
-                // Update Header
-                const headerUserName = document.getElementById('headerUserName');
-                const headerUserAvatar = document.getElementById('headerUserAvatar');
-                if(headerUserName) headerUserName.innerText = `Welcome back, ${userName}`;
-                if(headerUserAvatar) headerUserAvatar.src = avatarUrl;
-
-                // Update Settings Tab
-                const settingsUserAvatar = document.getElementById('settingsUserAvatar');
-                const settingsFullName = document.getElementById('settingsFullName');
-                const settingsUsername = document.getElementById('settingsUsername');
-                const settingsEmail = document.getElementById('settingsEmail');
-
-                if(settingsUserAvatar) settingsUserAvatar.src = avatarUrl;
-                if(settingsFullName) settingsFullName.value = userName;
-                if(settingsUsername) settingsUsername.value = userName.toLowerCase().replace(/\s+/g, '_');
-                if(settingsEmail) settingsEmail.value = userEmail;
+            let userName = 'User';
+            if (session.user.user_metadata && session.user.user_metadata.full_name) {
+                userName = session.user.user_metadata.full_name;
             }
+            if (profile && profile.full_name) {
+                userName = profile.full_name;
+            }
+
+            const userEmail = (profile && profile.email) || session.user.email;
+            const encodedName = encodeURIComponent(userName);
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodedName}&background=0D8ABC&color=fff`;
+
+            // Update Header
+            const headerUserName = document.getElementById('headerUserName');
+            const headerUserAvatar = document.getElementById('headerUserAvatar');
+            if(headerUserName) headerUserName.innerText = `Welcome back, ${userName}`;
+            if(headerUserAvatar) headerUserAvatar.src = avatarUrl;
+
+            // Update Settings Tab
+            const settingsUserAvatar = document.getElementById('settingsUserAvatar');
+            const settingsFullName = document.getElementById('settingsFullName');
+            const settingsUsername = document.getElementById('settingsUsername');
+            const settingsEmail = document.getElementById('settingsEmail');
+
+            if(settingsUserAvatar) settingsUserAvatar.src = avatarUrl;
+            if(settingsFullName) settingsFullName.value = userName;
+            if(settingsUsername) settingsUsername.value = userName.toLowerCase().replace(/\s+/g, '_');
+            if(settingsEmail) settingsEmail.value = userEmail;
 
             // Fetch Subscription Status
             const { data: subs } = await supabaseClient
@@ -1992,7 +1997,6 @@
                         statusBadge.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3"></i> REJETÉ`;
                     }
                     lucide.createIcons();
-                    }
                 }
 
                 // Populate Subscription History
@@ -2026,8 +2030,8 @@
                     });
                     lucide.createIcons();
                 }
-            }
-        }
+            } // closes if (subs && subs.length > 0)
+        } // closes async function checkSession()
         checkSession();
 
         // Handle Logout
