@@ -299,7 +299,7 @@
                             <span class="text-slate-500 text-sm font-medium flex items-center gap-1">0.0%</span>
                         </div>
                         <p class="text-slate-400 text-sm mb-1">Profit Total</p>
-                        <h3 class="text-3xl font-bold font-heading tracking-tight">$0.00</h3>
+                        <h3 class="text-3xl font-bold font-heading tracking-tight" id="dashTotalProfit">$0.00</h3>
                     </div>
 
                     <!-- Card 3 -->
@@ -311,10 +311,10 @@
                         </div>
                         <p class="text-slate-400 text-sm mb-1">Taux de Réussite</p>
                         <div class="flex items-end gap-3">
-                            <h3 class="text-3xl font-bold font-heading">0%</h3>
+                            <h3 class="text-3xl font-bold font-heading" id="dashWinRate">0%</h3>
                             <div class="flex-1 mb-2">
                                 <div class="w-full bg-slate-800 rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-sky-400 to-purple-500 h-1.5 rounded-full" style="width: 0%"></div>
+                                    <div class="bg-gradient-to-r from-sky-400 to-purple-500 h-1.5 rounded-full" style="width: 0%" id="dashWinRateBar"></div>
                                 </div>
                             </div>
                         </div>
@@ -330,10 +330,10 @@
                         </div>
                         <p class="text-slate-400 text-sm mb-1">Drawdown Max</p>
                         <div class="flex items-end gap-3">
-                            <h3 class="text-3xl font-bold font-heading">0.0%</h3>
+                            <h3 class="text-3xl font-bold font-heading" id="dashMaxDrawdown">0.0%</h3>
                             <div class="flex-1 mb-2">
                                 <div class="w-full bg-slate-800 rounded-full h-1.5">
-                                    <div class="bg-rose-500 h-1.5 rounded-full shadow-[0_0_8px_#ef4444]" style="width: 0%"></div>
+                                    <div class="bg-rose-500 h-1.5 rounded-full shadow-[0_0_8px_#ef4444]" style="width: 0%" id="dashMaxDrawdownBar"></div>
                                 </div>
                             </div>
                         </div>
@@ -421,7 +421,7 @@
                                     <th class="pb-3 px-4 font-medium text-right">Statut</th>
                                 </tr>
                             </thead>
-                            <tbody class="text-sm">
+                            <tbody class="text-sm" id="liveTradesBody">
                                 <tr>
                                     <td colspan="6" class="py-12 text-center">
                                         <div class="flex flex-col items-center justify-center">
@@ -1191,7 +1191,7 @@
             lucide.createIcons();
         });
 
-        mt5Form.addEventListener('submit', (e) => {
+        mt5Form.addEventListener('submit', async (e) => {
             e.preventDefault();
             // Loading state
             const originalText = connectBtn.innerHTML;
@@ -1199,8 +1199,34 @@
             connectBtn.disabled = true;
             lucide.createIcons();
 
-            // Fake API Call
-            setTimeout(() => {
+            // Fetch field values
+            const broker = document.getElementById('mt5broker').value;
+            const loginId = document.getElementById('mt5login').value;
+            const password = document.getElementById('mt5pwd').value;
+            const server = document.getElementById('mt5server').value;
+            const type = document.getElementById('mt5type').value;
+
+            try {
+                // Get Current User ID
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Non connecté");
+
+                // Save to Supabase
+                const { data, error } = await supabaseClient
+                    .from('mt5_accounts')
+                    .insert([{
+                        user_id: session.user.id,
+                        broker_name: broker,
+                        login_id: loginId,
+                        encrypted_password: password, // Note: Frontend relies on HTTPS + DB RLS for transit security
+                        server_name: server,
+                        account_type: type,
+                        status: 'CONNECTED'
+                    }]);
+
+                if (error) throw error;
+
+                // Success UI Update
                 formContainer.classList.add('hidden');
                 connectedContainer.classList.remove('hidden');
                 // Update sidebar dot
@@ -1212,17 +1238,37 @@
                 connectBtn.disabled = false;
                 mt5Form.reset();
                 lucide.createIcons();
-            }, 2000);
+
+            } catch (err) {
+                console.error("MT5 Error:", err);
+                alert("Erreur lors de la sauvegarde du compte MT5.");
+                connectBtn.innerHTML = originalText;
+                connectBtn.disabled = false;
+                lucide.createIcons();
+            }
         });
 
-        disconnectBtn.addEventListener('click', () => {
+        disconnectBtn.addEventListener('click', async () => {
             if(confirm("Are you sure you want to disconnect your MT5 account? The bot will stop trading immediately.")) {
-                connectedContainer.classList.add('hidden');
-                formContainer.classList.remove('hidden');
-                
-                // Revert sidebar dot
-                sidebarMT5Dot.classList.replace('bg-emerald-400', 'bg-rose-500');
-                sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#34d399]', 'shadow-[0_0_8px_#ef4444]');
+                try {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if(session) {
+                        await supabaseClient
+                            .from('mt5_accounts')
+                            .delete()
+                            .eq('user_id', session.user.id);
+                    }
+                    
+                    connectedContainer.classList.add('hidden');
+                    formContainer.classList.remove('hidden');
+                    
+                    // Revert sidebar dot
+                    sidebarMT5Dot.classList.replace('bg-emerald-400', 'bg-rose-500');
+                    sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#34d399]', 'shadow-[0_0_8px_#ef4444]');
+                } catch(err) {
+                    console.error("Disconnect Error:", err);
+                    alert("Erreur lors de la déconnexion.");
+                }
             }
         });
 
@@ -1445,6 +1491,114 @@
                 window.location.href = 'login.html';
             });
         }
+
+        // --- SUPABASE REALTIME TRADES INTEGRATION ---
+        async function loadAndSubscribeToTrades() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if(!session) return;
+            const userId = session.user.id;
+
+            const liveTradesBody = document.getElementById('liveTradesBody');
+            const dashTotalProfit = document.getElementById('dashTotalProfit');
+            const dashWinRate = document.getElementById('dashWinRate');
+            const dashWinRateBar = document.getElementById('dashWinRateBar');
+
+            function renderTrades(trades) {
+                if(!trades || trades.length === 0) {
+                    liveTradesBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="inbox" class="w-8 h-8 text-slate-600 mb-3"></i>
+                                    <p class="text-slate-400 font-medium">Aucune transaction enregistrée</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                liveTradesBody.innerHTML = '';
+                let totalProfit = 0;
+                let wonTrades = 0;
+                let completedTrades = 0;
+
+                trades.forEach(trade => {
+                    // Accumulate stats
+                    totalProfit += parseFloat(trade.profit || 0);
+                    if(trade.status === 'WON' || trade.status === 'LOST') {
+                        completedTrades++;
+                        if(trade.status === 'WON') wonTrades++;
+                    }
+
+                    // Render Row
+                    const typeColor = trade.type === 'BUY' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10';
+                    const profitColor = trade.profit > 0 ? 'text-emerald-400' : (trade.profit < 0 ? 'text-rose-400' : 'text-slate-300');
+                    const statusBadge = trade.status === 'OPEN' 
+                        ? '<span class="px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold">OPEN</span>'
+                        : (trade.status === 'WON' 
+                            ? '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">WON</span>'
+                            : '<span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">LOST</span>');
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold font-heading">${trade.symbol}</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-bold ${typeColor}">${trade.type}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 font-medium">${trade.entry.toFixed(5)}</td>
+                        <td class="py-3 px-4 text-emerald-400">${trade.tp ? trade.tp.toFixed(5) : '-'}</td>
+                        <td class="py-3 px-4 text-rose-400">${trade.sl ? trade.sl.toFixed(5) : '-'}</td>
+                        <td class="py-3 px-4 font-bold ${profitColor}">$${trade.profit.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-right">${statusBadge}</td>
+                    `;
+                    liveTradesBody.appendChild(tr);
+                });
+                
+                // Update Dashboard Metrics
+                dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                if(completedTrades > 0) {
+                    const winRate = Math.round((wonTrades / completedTrades) * 100);
+                    dashWinRate.innerText = `${winRate}%`;
+                    dashWinRateBar.style.width = `${winRate}%`;
+                }
+            }
+
+            // 1. Initial Fetch
+            const { data: initialTrades } = await supabaseClient
+                .from('trades')
+                .select('*')
+                .eq('user_id', userId)
+                .order('open_time', { ascending: false });
+            
+            renderTrades(initialTrades);
+
+            // 2. Realtime Subscription
+            const channel = supabaseClient
+                .channel('schema-db-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'trades', filter: `user_id=eq.${userId}` },
+                    async (payload) => {
+                        // Re-fetch to ensure order and full state (simplified approach)
+                        const { data: updatedTrades } = await supabaseClient
+                            .from('trades')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('open_time', { ascending: false });
+                        renderTrades(updatedTrades);
+                    }
+                )
+                .subscribe();
+        }
+
+        // Initialize Realtime
+        loadAndSubscribeToTrades();
+
     </script>
 </body>
 </html>
