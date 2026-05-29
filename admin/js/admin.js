@@ -233,7 +233,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- 7. LOGOUT ---
+    // --- 7. FETCH PAYMENTS (SUBSCRIPTIONS) ---
+    async function loadPayments() {
+        const { data: payments } = await supabaseClient
+            .from('subscriptions')
+            .select('*, profiles(full_name, email)')
+            .order('created_at', { ascending: false });
+
+        const tbody = document.getElementById('paymentsTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+
+        if(payments && payments.length > 0) {
+            payments.forEach(payment => {
+                const tr = document.createElement('tr');
+                const userFullName = payment.profiles?.full_name || 'Unknown';
+                const userEmail = payment.profiles?.email || 'No email';
+                const planDetails = payment.plan_name.includes('Starter') ? 'Moncash/Natcash' : 'Crypto/USDT';
+                
+                let statusBadge = '';
+                if(payment.status === 'PENDING') statusBadge = '<span class="badge badge-warning">PENDING</span>';
+                else if(payment.status === 'ACTIVE') statusBadge = '<span class="badge badge-success">APPROVED</span>';
+                else statusBadge = '<span class="badge badge-danger">REJECTED</span>';
+
+                tr.innerHTML = `
+                    <td class="text-slate-400 text-xs font-mono">
+                        <div class="font-bold text-white text-sm">${userFullName}</div>
+                        ${userEmail}
+                    </td>
+                    <td class="font-bold text-slate-300">${planDetails}</td>
+                    <td class="font-mono text-sky-400 text-xs">${payment.id.split('-')[0]}...</td>
+                    <td class="font-bold text-white">${payment.plan_name}</td>
+                    <td>
+                        <button class="text-sky-400 hover:text-white transition-colors text-xs flex items-center gap-1 bg-sky-500/10 px-2 py-1 rounded">
+                            <i data-lucide="image" class="w-3 h-3"></i> View Proof
+                        </button>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td class="text-right">
+                        ${payment.status === 'PENDING' ? `
+                            <button class="text-emerald-400 hover:text-white transition-colors mr-3" title="Approve"><i data-lucide="check" class="w-4 h-4"></i></button>
+                            <button class="text-rose-400 hover:text-white transition-colors" title="Reject"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        ` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+            
+            // Update the badge count in the sidebar
+            const pendingCount = payments.filter(p => p.status === 'PENDING').length;
+            const badge = document.getElementById('pendingPaymentsBadge');
+            if(badge) {
+                if(pendingCount > 0) {
+                    badge.innerText = pendingCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No payments found.</td></tr>`;
+        }
+    }
+
+    // --- 8. LOGOUT ---
     const logoutBtn = document.getElementById('logoutBtn');
     if(logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -247,6 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadUsers();
     loadMT5Accounts();
     loadLiveTrades();
+    loadPayments();
 
     // Set up Realtime Subscription for All Trades (Admin View)
     supabaseClient

@@ -1472,7 +1472,7 @@
             });
         }
 
-        paymentForm.addEventListener('submit', (e) => {
+        paymentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if(!selectedPaymentMethod.value) {
                 alert('Veuillez sélectionner une méthode de paiement.');
@@ -1488,12 +1488,27 @@
             submitPaymentBtn.disabled = true;
             lucide.createIcons();
 
-            setTimeout(() => {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Non connecté");
+
+                // We simulate a file upload by just passing the filename for the demo
+                // In production, this would use supabaseClient.storage.from('receipts').upload(...)
+                const mockReceiptUrl = receiptInput.files[0].name;
+
+                const { error } = await supabaseClient
+                    .from('subscriptions')
+                    .insert([{
+                        user_id: session.user.id,
+                        plan_name: modalPlanName.innerText,
+                        status: 'PENDING',
+                        payment_proof_url: mockReceiptUrl
+                    }]);
+
+                if (error) throw error;
+
                 paymentFormContainer.classList.add('hidden');
                 paymentPendingContainer.classList.remove('hidden');
-                
-                submitPaymentBtn.innerHTML = originalText;
-                submitPaymentBtn.disabled = false;
                 
                 // Update subscription status in dashboard visually
                 const statusDiv = document.querySelector('#tab-billing .glass-card:first-of-type h2');
@@ -1505,7 +1520,14 @@
                     statusBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> PENDING`;
                 }
 
-            }, 2000);
+            } catch (err) {
+                console.error("Payment Error:", err);
+                alert("Erreur lors de la soumission du paiement: " + (err.message || JSON.stringify(err)));
+            } finally {
+                submitPaymentBtn.innerHTML = originalText;
+                submitPaymentBtn.disabled = false;
+                lucide.createIcons();
+            }
         });
 
         // 5. Internal Settings Navigation
