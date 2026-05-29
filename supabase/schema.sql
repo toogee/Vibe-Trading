@@ -61,6 +61,8 @@ CREATE TABLE public.mt5_accounts (
     server_name TEXT NOT NULL,
     account_type TEXT DEFAULT 'Live' NOT NULL,
     status TEXT DEFAULT 'DISCONNECTED' NOT NULL,
+    balance NUMERIC DEFAULT 0,
+    equity NUMERIC DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
