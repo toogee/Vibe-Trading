@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadUsers() {
         const { data: users } = await supabaseClient
             .from('profiles')
-            .select('*')
+            .select('*, subscriptions(*)')
             .order('created_at', { ascending: false });
 
         const tbody = document.getElementById('usersTableBody');
@@ -138,6 +138,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ? '<span class="badge badge-danger">ADMIN</span>' 
                     : '<span class="badge badge-info">USER</span>';
                 
+                // Determine true status based on subscriptions
+                let statusBadge = '<span class="badge bg-slate-800 text-slate-400 border border-slate-700">INACTIF</span>';
+                if (user.subscriptions && user.subscriptions.length > 0) {
+                    const hasActive = user.subscriptions.some(s => s.status === 'ACTIVE');
+                    const hasPending = user.subscriptions.some(s => s.status === 'PENDING');
+                    
+                    if (hasActive) {
+                        statusBadge = '<span class="badge badge-success">ACTIF</span>';
+                    } else if (hasPending) {
+                        statusBadge = '<span class="badge badge-warning">EN ATTENTE</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-danger">REJETÉ</span>';
+                    }
+                }
+
                 tr.innerHTML = `
                     <td>
                         <div class="flex items-center gap-3">
@@ -147,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                     <td class="text-slate-400">${user.email}</td>
                     <td>${roleBadge}</td>
-                    <td><span class="badge badge-success">ACTIVE</span></td>
+                    <td>${statusBadge}</td>
                     <td class="text-slate-400">${new Date(user.created_at).toLocaleDateString()}</td>
                     <td class="text-right">
                         <button class="text-sky-400 hover:text-white transition-colors mr-3"><i data-lucide="edit" class="w-4 h-4"></i></button>
@@ -370,8 +385,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         throw new Error("Mise à jour bloquée par la sécurité (RLS). Avez-vous exécuté la commande SQL dans Supabase ?");
                     }
                     
-                    // Reload table
+                    // Reload tables
                     loadPayments();
+                    loadUsers();
                     
                 } catch (err) {
                     console.error("Update Error:", err);
