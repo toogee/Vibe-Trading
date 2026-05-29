@@ -239,7 +239,7 @@
                 </div>
                 
                 <!-- Notifications -->
-                <button onclick="alert('Vous n\'avez aucune nouvelle notification pour le moment.')" class="relative text-slate-400 hover:text-white transition-colors">
+                <button onclick="showComingSoonModal('Notifications', 'Vous n\'avez aucune nouvelle notification pour le moment.')" class="relative text-slate-400 hover:text-white transition-colors">
                     <i data-lucide="bell" class="w-6 h-6"></i>
                     <span class="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-slate-900"></span>
                 </button>
@@ -572,7 +572,7 @@
                             </div>
                             
                             <div class="flex gap-3">
-                                <button onclick="alert('Les paramètres avancés de MT5 seront disponibles dans une prochaine mise à jour.')" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors" title="Edit Settings">
+                                <button onclick="showComingSoonModal('Paramètres', 'Les paramètres avancés de MT5 seront disponibles dans une prochaine mise à jour.')" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors" title="Edit Settings">
                                     <i data-lucide="settings-2" class="w-5 h-5"></i>
                                 </button>
                                 <button id="disconnectBtn" class="px-4 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors font-medium text-sm flex items-center gap-2">
@@ -1195,9 +1195,53 @@
         </div>
     </div>
 
+    <!-- Coming Soon Modal -->
+    <div id="comingSoonModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeComingSoonModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="glass-card rounded-3xl w-full max-w-sm p-6 relative z-10 border border-sky-500/30 transform scale-95 transition-transform duration-300 shadow-2xl">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center mb-4 border-2 border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.3)]">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-sky-400"></i>
+                </div>
+                <h3 id="comingSoonTitle" class="text-xl font-bold font-heading mb-2 text-white">Bientôt Disponible</h3>
+                <p id="comingSoonMsg" class="text-slate-400 text-sm mb-6 leading-relaxed">Cette fonctionnalité sera ajoutée dans une future mise à jour.</p>
+                <button onclick="closeComingSoonModal()" class="btn-gradient w-full py-2.5 rounded-xl font-bold flex justify-center items-center gap-2">
+                    <span>Compris !</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize Icons
         lucide.createIcons();
+
+        // Coming Soon Modal logic
+        function showComingSoonModal(title, msg) {
+            document.getElementById('comingSoonTitle').innerText = title;
+            document.getElementById('comingSoonMsg').innerText = msg;
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.remove('hidden');
+            // Allow display:flex to render before changing opacity/scale for transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('.glass-card').classList.remove('scale-95');
+                modal.querySelector('.glass-card').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeComingSoonModal() {
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('.glass-card').classList.remove('scale-100');
+            modal.querySelector('.glass-card').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
 
         // 1. Sidebar Toggle (Mobile)
         const sidebar = document.getElementById('sidebar');

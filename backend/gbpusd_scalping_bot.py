@@ -48,10 +48,13 @@ PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
 MAX_DAILY_TRADES= 3
 MAX_DAILY_LOSSES= 2
 
-# Session: 06:00–12:00 London time (UTC+1 BST / UTC+0 GMT)
+# Session: 06:00–17:00 London time (UTC+1 BST / UTC+0 GMT)
 SESSION_START_HOUR = 6
-SESSION_END_HOUR   = 12
+SESSION_END_HOUR   = 17
 TIMEZONE           = "Europe/London"
+
+# Spread filter
+MAX_SPREAD_PIPS    = 1.5
 
 # News filter: minutes before/after high-impact event to avoid trading
 NEWS_BUFFER_MINUTES = 30
@@ -64,7 +67,7 @@ EMA_PERIOD = 200
 SWING_LOOKBACK = 5
 
 # Supply/Demand zone tolerance in pips
-ZONE_TOLERANCE_PIPS = 3
+ZONE_TOLERANCE_PIPS = 5
 
 # Consolidation / low-volatility filter
 MIN_CANDLE_BODY_PIPS = 2.0   # Minimum candle body to consider non-weak
@@ -560,6 +563,12 @@ def place_order_for_all_users(direction: str) -> bool:
             point = sym_info.point
             pips_to_pts = int(round(PIP_VALUE / point))
             
+            # Spread Check
+            spread_pips = (tick.ask - tick.bid) / PIP_VALUE
+            if spread_pips > MAX_SPREAD_PIPS:
+                log.warning(f"Spread {spread_pips:.1f} pips exceeds limit {MAX_SPREAD_PIPS}. Skipping trade for {login}.")
+                continue
+            
             # Calculate dynamic lot size based on balance
             account_info = mt5.account_info()
             if account_info is None:
@@ -658,6 +667,72 @@ def check_closed_trades():
         profit = deal.profit
         log.info(f"Closed trade ticket={deal.ticket} | profit={profit:.2f}")
         daily.record_trade_result(profit)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BREAK-EVEN MANAGEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+def manage_open_trades_breakeven():
+    """
+    Checks if any open positions are > +6 pips in profit.
+    If so, moves the Stop-Loss to the entry price (Break-Even) to secure capital.
+    """
+    active_users = get_active_users()
+    if not active_users: return
+    
+    for user_id in active_users:
+        mt5_acc = get_user_mt5_account(user_id)
+        if not mt5_acc: continue
+        
+        try:
+            plain_password = decrypt_password(mt5_acc['encrypted_password'])
+            login = int(mt5_acc['login_id'])
+            server = mt5_acc['server_name']
+            
+            # Switch to this user's account to manage their trades
+            if not mt5.login(login=login, password=plain_password, server=server):
+                continue
+            
+            positions = mt5.positions_get(symbol=SYMBOL)
+            if not positions: continue
+            
+            for pos in positions:
+                if pos.magic != MAGIC_NUMBER:
+                    continue
+                
+                # Check for BUY
+                if pos.type == mt5.ORDER_TYPE_BUY:
+                    profit_pips = (pos.price_current - pos.price_open) / PIP_VALUE
+                    # If profit >= 6 pips and SL is not already at or above entry
+                    if profit_pips >= 6.0 and pos.sl < pos.price_open:
+                        request = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": pos.ticket,
+                            "symbol": SYMBOL,
+                            "sl": pos.price_open,
+                            "tp": pos.tp
+                        }
+                        res = mt5.order_send(request)
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                            log.info(f"Break-even applied for user {login} BUY {pos.ticket}")
+                            
+                # Check for SELL
+                elif pos.type == mt5.ORDER_TYPE_SELL:
+                    profit_pips = (pos.price_open - pos.price_current) / PIP_VALUE
+                    # If profit >= 6 pips and SL is not already at or below entry
+                    if profit_pips >= 6.0 and (pos.sl > pos.price_open or pos.sl == 0.0):
+                        request = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": pos.ticket,
+                            "symbol": SYMBOL,
+                            "sl": pos.price_open,
+                            "tp": pos.tp
+                        }
+                        res = mt5.order_send(request)
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                            log.info(f"Break-even applied for user {login} SELL {pos.ticket}")
+        except Exception as e:
+            log.error(f"Error checking break-even for user {user_id}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SYNC BALANCES
@@ -803,6 +878,9 @@ def run():
     while True:
         try:
             check_closed_trades()
+            
+            # Manage break-even for open positions
+            manage_open_trades_breakeven()
 
             # Sync balances every 5 minutes (300 seconds)
             current_time = time.time()
