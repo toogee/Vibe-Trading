@@ -234,8 +234,8 @@
 
             <div class="flex items-center gap-4 sm:gap-6">
                 <!-- Plan Badge -->
-                <div id="headerPlanBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 hidden sm:flex items-center gap-1 cursor-pointer hover:bg-slate-700 transition-all" title="Mettre à niveau vers Pro">
-                    PLAN GRATUIT
+                <div id="headerPlanBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 hidden sm:flex items-center gap-1 cursor-pointer hover:bg-sky-500/20 transition-all">
+                    Activer un Plan
                 </div>
                 
                 <!-- Notifications -->
@@ -1162,6 +1162,17 @@
                 }
             });
         });
+
+        // 2.5 Header Plan Badge to Billing Tab
+        const headerPlanBadge = document.getElementById('headerPlanBadge');
+        if(headerPlanBadge) {
+            headerPlanBadge.addEventListener('click', () => {
+                const billingNav = document.querySelector('.nav-item[data-target="tab-billing"]');
+                if(billingNav) {
+                    billingNav.click();
+                }
+            });
+        }
 
         // 3. MT5 Form Interaction
         const mt5Form = document.getElementById('mt5Form');
