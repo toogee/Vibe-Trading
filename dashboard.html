@@ -278,8 +278,8 @@
                         <p class="text-slate-400 text-sm">Métriques de performance en temps réel</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="px-4 py-2 rounded-lg bg-slate-800 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700">Aujourd'hui</button>
-                        <button class="px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30">Depuis Toujours</button>
+                        <button id="btnFilterToday" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700">Aujourd'hui</button>
+                        <button id="btnFilterAll" class="px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30">Depuis Toujours</button>
                     </div>
                 </div>
 
@@ -2121,8 +2121,43 @@
             const statsTotalProfit = document.getElementById('statsTotalProfit');
             const statsWinRate = document.getElementById('statsWinRate');
 
+            let allFetchedTrades = [];
+            let currentTradeFilter = 'all';
+
+            const btnFilterToday = document.getElementById('btnFilterToday');
+            const btnFilterAll = document.getElementById('btnFilterAll');
+
+            function updateFilterUI() {
+                if(currentTradeFilter === 'today') {
+                    if(btnFilterToday) btnFilterToday.className = "px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30";
+                    if(btnFilterAll) btnFilterAll.className = "px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700";
+                } else {
+                    if(btnFilterToday) btnFilterToday.className = "px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700";
+                    if(btnFilterAll) btnFilterAll.className = "px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30";
+                }
+            }
+
+            if(btnFilterToday && btnFilterAll) {
+                btnFilterToday.addEventListener('click', () => {
+                    currentTradeFilter = 'today';
+                    updateFilterUI();
+                    renderTrades(allFetchedTrades);
+                });
+                btnFilterAll.addEventListener('click', () => {
+                    currentTradeFilter = 'all';
+                    updateFilterUI();
+                    renderTrades(allFetchedTrades);
+                });
+            }
+
             function renderTrades(trades) {
-                if(!trades || trades.length === 0) {
+                let filteredTrades = trades || [];
+                if (currentTradeFilter === 'today') {
+                    const today = new Date().toLocaleDateString();
+                    filteredTrades = filteredTrades.filter(t => new Date(t.open_time).toLocaleDateString() === today);
+                }
+
+                if(filteredTrades.length === 0) {
                     const emptyState = `
                         <tr>
                             <td colspan="6" class="py-12 text-center">
@@ -2145,7 +2180,7 @@
                 let wonTrades = 0;
                 let completedTrades = 0;
 
-                trades.forEach(trade => {
+                filteredTrades.forEach(trade => {
                     // Accumulate stats
                     totalProfit += parseFloat(trade.profit || 0);
                     if(trade.status === 'WON' || trade.status === 'LOST') {
@@ -2185,7 +2220,7 @@
                 if(dashTotalProfit) dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
                 if(statsTotalProfit) statsTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
                 
-                if(statsTotalTrades) statsTotalTrades.innerText = completedTrades + (trades.length - completedTrades); // include OPEN
+                if(statsTotalTrades) statsTotalTrades.innerText = completedTrades + (filteredTrades.length - completedTrades); // include OPEN
                 if(statsWonTrades) statsWonTrades.innerText = wonTrades;
                 if(statsLostTrades) statsLostTrades.innerText = (completedTrades - wonTrades);
 
@@ -2208,7 +2243,8 @@
                 .eq('user_id', userId)
                 .order('open_time', { ascending: false });
             
-            renderTrades(initialTrades);
+            allFetchedTrades = initialTrades || [];
+            renderTrades(allFetchedTrades);
 
             // 2. Realtime Subscription
             const channel = supabaseClient
@@ -2223,7 +2259,8 @@
                             .select('*')
                             .eq('user_id', userId)
                             .order('open_time', { ascending: false });
-                        renderTrades(updatedTrades);
+                        allFetchedTrades = updatedTrades || [];
+                        renderTrades(allFetchedTrades);
                     }
                 )
                 .on(
