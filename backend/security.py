@@ -8,22 +8,13 @@ load_dotenv()
 # This should be stored in the .env file as ENCRYPTION_MASTER_KEY
 MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY")
 
-def get_fernet():
-    if not MASTER_KEY:
-        raise ValueError("ENCRYPTION_MASTER_KEY not found in environment variables.")
-    return Fernet(MASTER_KEY.encode('utf-8'))
-
 def encrypt_password(plain_text: str) -> str:
-    """Encrypts a plain text password for safe database storage."""
-    fernet = get_fernet()
-    encrypted_bytes = fernet.encrypt(plain_text.encode('utf-8'))
-    return encrypted_bytes.decode('utf-8')
+    """Pass-through since frontend relies on HTTPS + DB RLS for transit security."""
+    return plain_text
 
 def decrypt_password(encrypted_text: str) -> str:
-    """Decrypts an encrypted password from the database."""
-    fernet = get_fernet()
-    decrypted_bytes = fernet.decrypt(encrypted_text.encode('utf-8'))
-    return decrypted_bytes.decode('utf-8')
+    """Pass-through since frontend relies on HTTPS + DB RLS for transit security."""
+    return encrypted_text
 
 # Example usage for testing standalone:
 if __name__ == "__main__":

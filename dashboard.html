@@ -239,7 +239,7 @@
                 </div>
                 
                 <!-- Notifications -->
-                <button class="relative text-slate-400 hover:text-white transition-colors">
+                <button onclick="alert('Vous n\'avez aucune nouvelle notification pour le moment.')" class="relative text-slate-400 hover:text-white transition-colors">
                     <i data-lucide="bell" class="w-6 h-6"></i>
                     <span class="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-slate-900"></span>
                 </button>
@@ -445,6 +445,15 @@
                     <p class="text-slate-400">Connectez votre courtier en toute sécurité pour permettre à Vibe Trading d'exécuter des transactions automatisées.</p>
                 </div>
 
+                <!-- Locked State (No Active Subscription) -->
+                <div id="mt5-locked-container" class="hidden glass-card rounded-3xl p-8 text-center flex flex-col items-center justify-center border border-rose-500/30">
+                    <div class="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mb-4">
+                        <i data-lucide="lock" class="w-8 h-8 text-rose-400"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-2">Abonnement Requis</h2>
+                    <p class="text-slate-400 max-w-md mx-auto">Vous devez posséder un abonnement actif pour pouvoir connecter votre compte MetaTrader 5 au bot Vibe Trading.</p>
+                </div>
+
                 <!-- Not Connected State -->
                 <div id="mt5-form-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
@@ -563,7 +572,7 @@
                             </div>
                             
                             <div class="flex gap-3">
-                                <button class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors" title="Edit Settings">
+                                <button onclick="alert('Les paramètres avancés de MT5 seront disponibles dans une prochaine mise à jour.')" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors" title="Edit Settings">
                                     <i data-lucide="settings-2" class="w-5 h-5"></i>
                                 </button>
                                 <button id="disconnectBtn" class="px-4 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors font-medium text-sm flex items-center gap-2">
@@ -1312,17 +1321,13 @@
                 sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
                 sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
                 
-                // Demo: Simulate Balance Sync
+                // Loading State
                 document.getElementById('connectedBalance').innerText = 'Syncing...';
                 document.getElementById('connectedEquity').innerText = 'Syncing...';
                 document.getElementById('connectedBalance').classList.remove('text-emerald-400');
-                setTimeout(() => {
-                    const fakeBalance = (Math.random() * 10000 + 5000).toFixed(2);
-                    document.getElementById('connectedBalance').innerText = `$${fakeBalance}`;
-                    document.getElementById('connectedBalance').classList.add('text-emerald-400');
-                    document.getElementById('connectedEquity').innerText = `$${fakeBalance}`;
-                }, 2500);
                 
+                // Real data will be fetched on next page reload or via realtime update
+
                 // Reset button
                 connectBtn.innerHTML = originalText;
                 connectBtn.disabled = false;
@@ -1771,7 +1776,25 @@
 
             const formContainer = document.getElementById('mt5-form-container');
             const connectedContainer = document.getElementById('mt5-connected-container');
+            const lockedContainer = document.getElementById('mt5-locked-container');
             const sidebarMT5Dot = document.getElementById('sidebarMT5Dot');
+
+            // Fetch Subscription directly to be sure (since loadAndSubscribeToTrades and checkSession run async)
+            const { data: subsCheck } = await supabaseClient
+                .from('subscriptions')
+                .select('status')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            const isActive = (subsCheck && subsCheck.length > 0 && subsCheck[0].status === 'ACTIVE');
+
+            if (!isActive) {
+                // Lock the MT5 section
+                if(formContainer) formContainer.classList.add('hidden');
+                if(connectedContainer) connectedContainer.classList.add('hidden');
+                if(lockedContainer) lockedContainer.classList.remove('hidden');
+                return; // Stop here, no need to subscribe to trades or mt5 accounts
+            }
 
             if (mt5Accounts && mt5Accounts.length > 0) {
                 const acc = mt5Accounts[0];
@@ -1786,22 +1809,20 @@
                     sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
                 }
 
-                // Demo: Simulate Balance Sync on page load
-                setTimeout(() => {
-                    // Generates a random balance between 5000 and 15000
-                    // Uses a seeded approach based on user ID to keep it consistent per user session
-                    let seed = 0;
-                    for(let i=0; i<userId.length; i++) { seed += userId.charCodeAt(i); }
-                    const fakeBalance = ((seed % 10000) + 5000).toFixed(2);
+                // Real Balance Sync
+                const cb = document.getElementById('connectedBalance');
+                const ce = document.getElementById('connectedEquity');
+                if(cb && ce) {
+                    cb.innerText = `$${parseFloat(acc.balance || 0).toFixed(2)}`;
+                    cb.classList.add('text-emerald-400');
+                    ce.innerText = `$${parseFloat(acc.equity || 0).toFixed(2)}`;
                     
-                    const cb = document.getElementById('connectedBalance');
-                    const ce = document.getElementById('connectedEquity');
-                    if(cb && ce) {
-                        cb.innerText = `$${fakeBalance}`;
-                        cb.classList.add('text-emerald-400');
-                        ce.innerText = `$${fakeBalance}`;
+                    // Masquer le message de synchronisation si la balance est là
+                    if(parseFloat(acc.balance || 0) > 0) {
+                        const syncMsg = document.querySelector('.bg-sky-900\\/30');
+                        if(syncMsg) syncMsg.style.display = 'none';
                     }
-                }, 1500);
+                }
             }
 
             const liveTradesBody = document.getElementById('liveTradesBody');
@@ -1920,6 +1941,25 @@
                             .eq('user_id', userId)
                             .order('open_time', { ascending: false });
                         renderTrades(updatedTrades);
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'mt5_accounts', filter: `user_id=eq.${userId}` },
+                    (payload) => {
+                        const updatedAcc = payload.new;
+                        const cb = document.getElementById('connectedBalance');
+                        const ce = document.getElementById('connectedEquity');
+                        if (cb && ce) {
+                            cb.innerText = `$${parseFloat(updatedAcc.balance || 0).toFixed(2)}`;
+                            cb.classList.add('text-emerald-400');
+                            ce.innerText = `$${parseFloat(updatedAcc.equity || 0).toFixed(2)}`;
+                            
+                            if (parseFloat(updatedAcc.balance || 0) > 0) {
+                                const syncMsg = document.querySelector('.bg-sky-900\\/30');
+                                if (syncMsg) syncMsg.style.display = 'none';
+                            }
+                        }
                     }
                 )
                 .subscribe();
