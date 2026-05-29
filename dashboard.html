@@ -1241,7 +1241,8 @@
 
             } catch (err) {
                 console.error("MT5 Error:", err);
-                alert("Erreur lors de la sauvegarde du compte MT5.");
+                const errorMsg = err.message || JSON.stringify(err);
+                alert("Erreur lors de la sauvegarde: " + errorMsg);
                 connectBtn.innerHTML = originalText;
                 connectBtn.disabled = false;
                 lucide.createIcons();
