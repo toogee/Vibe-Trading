@@ -634,15 +634,15 @@
                         <div class="flex gap-8">
                             <div>
                                 <p class="text-xs text-slate-500 mb-1">Date d'Activation</p>
-                                <p class="font-medium">--</p>
+                                <p class="font-medium" id="activationDateDisplay">--</p>
                             </div>
                             <div>
                                 <p class="text-xs text-slate-500 mb-1">Date d'Expiration</p>
-                                <p class="font-medium">--</p>
+                                <p class="font-medium" id="expirationDateDisplay">--</p>
                             </div>
                             <div>
                                 <p class="text-xs text-slate-500 mb-1">Jours Restants</p>
-                                <p class="font-medium text-rose-400">0</p>
+                                <p class="font-medium text-rose-400" id="daysLeftDisplay">0</p>
                             </div>
                         </div>
                     </div>
@@ -1695,6 +1695,36 @@
                             headerProBadge.classList.remove('hidden');
                             headerProBadge.classList.add('flex');
                         }
+                        
+                        // Calculate dates
+                        const activationDate = new Date(sub.created_at);
+                        let durationDays = 30; // Starter = 30 days
+                        if (planName.toLowerCase().includes('pro')) durationDays = 90; // Pro = 90 days
+                        if (planName.toLowerCase().includes('vip')) durationDays = 180; // VIP = 180 days
+                        
+                        const expirationDate = new Date(activationDate);
+                        expirationDate.setDate(expirationDate.getDate() + durationDays);
+                        
+                        const now = new Date();
+                        const timeDiff = expirationDate.getTime() - now.getTime();
+                        let daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        if (daysLeft < 0) daysLeft = 0;
+                        
+                        const elActivation = document.getElementById('activationDateDisplay');
+                        const elExpiration = document.getElementById('expirationDateDisplay');
+                        const elDaysLeft = document.getElementById('daysLeftDisplay');
+                        
+                        if (elActivation) elActivation.innerText = activationDate.toLocaleDateString();
+                        if (elExpiration) elExpiration.innerText = expirationDate.toLocaleDateString();
+                        if (elDaysLeft) {
+                            elDaysLeft.innerText = daysLeft;
+                            if (daysLeft > 10) {
+                                elDaysLeft.className = "font-medium text-emerald-400";
+                            } else {
+                                elDaysLeft.className = "font-medium text-rose-400";
+                            }
+                        }
+
                     } else if (sub.status === 'PENDING') {
                         statusBadge.className = "badge px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold flex items-center gap-1";
                         statusBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE`;
