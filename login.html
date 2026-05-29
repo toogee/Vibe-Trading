@@ -165,6 +165,16 @@
         }
         .btn-social:hover { background: rgba(51, 65, 85, 0.8); }
 
+        /* Toast */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none; }
+        .toast { pointer-events: auto; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(51, 65, 85, 0.6); color: white; padding: 1rem 1.25rem; border-radius: 1rem; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5); display: flex; align-items: center; gap: 0.875rem; transform: translateX(120%); opacity: 0; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 300px; max-width: 400px; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast-icon { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.6rem; flex-shrink: 0; }
+        .toast-success .toast-icon { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+        .toast-error .toast-icon { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
+        .toast-content { flex-grow: 1; }
+        .toast-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: #f8fafc; }
+        .toast-message { font-size: 0.85rem; color: #94a3b8; line-height: 1.4; }
     </style>
 </head>
 <body class="flex items-center justify-center p-4 sm:p-8">
@@ -295,6 +305,47 @@
     <script src="supabaseClient.js"></script>
 
     <script>
+        // Toast Notification System
+        function showToast(title, message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons({ root: toast });
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    toast.classList.add('show');
+                });
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 500);
+            }, 4000);
+        }
+
         // Initialize Lucide Icons
         lucide.createIcons();
 
@@ -348,10 +399,14 @@
 
                 if (error) throw error;
                 
-                // Redirect to dashboard
-                window.location.href = 'dashboard.html';
+                showToast("Succès", "Connexion réussie !", "success");
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
             } catch (error) {
-                alert("Erreur de connexion : " + error.message);
+                let msg = error.message;
+                if(msg.includes('Invalid login credentials')) msg = "Email ou mot de passe incorrect.";
+                showToast("Erreur", msg, "error");
                 submitBtn.disabled = false;
                 document.getElementById('btnText').classList.remove('hidden');
                 document.getElementById('spinner').classList.add('hidden');
