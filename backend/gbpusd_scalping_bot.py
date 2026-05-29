@@ -815,13 +815,16 @@ def evaluate_signal() -> Optional[str]:
 
         zones = demand_zones if direction == "buy" else supply_zones
 
-        # 6a. Price must be near a key level (zone, SMA50, or EMA200)
+        # 6a. Price must be near a key level (zone, or BOTH SMA50 and EMA200 simultaneously)
         near_zone    = price_in_zone(price, zones)
         near_sma50   = price_near_level(price, sma50, 4)
         near_ema200  = price_near_level(price, ema200, 4)
 
-        if not (near_zone or near_sma50 or near_ema200):
-            log.debug(f"[{direction.upper()}] Price not near key level.")
+        # The user specifically requested: "un retest sur les MMA50 en meme temps sur EMA200"
+        retest_both_mas = near_sma50 and near_ema200
+
+        if not (near_zone or retest_both_mas):
+            log.debug(f"[{direction.upper()}] Price not near zone or BOTH MAs.")
             continue
 
         # 6b. Break & Retest
@@ -844,7 +847,7 @@ def evaluate_signal() -> Optional[str]:
             log.debug(f"[{direction.upper()}] M1 not aligned.")
             continue
 
-        log.info(f"🎯 HIGH-PROBABILITY SETUP: {direction.upper()} | near_zone={near_zone} | near_sma50={near_sma50} | near_ema200={near_ema200}")
+        log.info(f"🎯 HIGH-PROBABILITY SETUP: {direction.upper()} | near_zone={near_zone} | retest_both_mas={retest_both_mas}")
         return direction
 
     return None
