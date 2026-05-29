@@ -553,12 +553,12 @@
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2 mb-1">
-                                        <h2 class="text-2xl font-bold font-heading">IC Markets</h2>
+                                        <h2 id="connectedBrokerName" class="text-2xl font-bold font-heading">Broker</h2>
                                         <span class="badge badge-success flex items-center gap-1 text-[10px]">
                                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> CONNECTED
                                         </span>
                                     </div>
-                                    <p class="text-slate-400 text-sm">Account: 8847291 • ICMarkets-Live01</p>
+                                    <p id="connectedAccountDetails" class="text-slate-400 text-sm">Account: ... • Server</p>
                                 </div>
                             </div>
                             
@@ -575,11 +575,11 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-8 border-t border-slate-700/50 relative z-10">
                             <div>
                                 <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Balance</p>
-                                <p class="text-xl font-bold">$5,240.00</p>
+                                <p id="connectedBalance" class="text-xl font-bold">Syncing...</p>
                             </div>
                             <div>
                                 <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Equity</p>
-                                <p class="text-xl font-bold text-sky-400">$5,285.50</p>
+                                <p id="connectedEquity" class="text-xl font-bold text-sky-400">Syncing...</p>
                             </div>
                             <div>
                                 <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Statut du Bot</p>
@@ -1227,6 +1227,9 @@
                 if (error) throw error;
 
                 // Success UI Update
+                document.getElementById('connectedBrokerName').innerText = broker;
+                document.getElementById('connectedAccountDetails').innerText = `Account: ${loginId} • ${server}`;
+
                 formContainer.classList.add('hidden');
                 connectedContainer.classList.remove('hidden');
                 // Update sidebar dot
@@ -1498,6 +1501,31 @@
             const { data: { session } } = await supabaseClient.auth.getSession();
             if(!session) return;
             const userId = session.user.id;
+
+            // 0. Check MT5 Account status
+            const { data: mt5Accounts } = await supabaseClient
+                .from('mt5_accounts')
+                .select('*')
+                .eq('user_id', userId)
+                .limit(1);
+
+            const formContainer = document.getElementById('mt5-form-container');
+            const connectedContainer = document.getElementById('mt5-connected-container');
+            const sidebarMT5Dot = document.getElementById('sidebarMT5Dot');
+
+            if (mt5Accounts && mt5Accounts.length > 0) {
+                const acc = mt5Accounts[0];
+                document.getElementById('connectedBrokerName').innerText = acc.broker_name;
+                document.getElementById('connectedAccountDetails').innerText = `Account: ${acc.login_id} • ${acc.server_name}`;
+                
+                formContainer.classList.add('hidden');
+                connectedContainer.classList.remove('hidden');
+                
+                if (sidebarMT5Dot) {
+                    sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
+                    sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
+                }
+            }
 
             const liveTradesBody = document.getElementById('liveTradesBody');
             const dashTotalProfit = document.getElementById('dashTotalProfit');
