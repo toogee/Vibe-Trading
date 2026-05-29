@@ -41,7 +41,7 @@ from security import decrypt_password
 
 SYMBOL          = "GBPUSD"
 MAGIC_NUMBER    = 20240601          # Unique ID for this bot's trades
-LOT_SIZE        = 0.01              # Fixed micro-lot — adjust carefully
+RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
 TAKE_PROFIT_PIP = 11                # TP in pips
 STOP_LOSS_PIP   = 5                 # SL in pips
 PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
@@ -479,6 +479,39 @@ def in_trading_session() -> bool:
 # TRADE EXECUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
+def calculate_lot_size(balance: float, risk_percent: float, sl_pips: float, sym_info) -> float:
+    """
+    Calculate position size based on account balance and risk percentage.
+    """
+    if balance <= 0 or sl_pips <= 0:
+        return sym_info.volume_min
+
+    risk_amount = balance * (risk_percent / 100.0)
+    
+    tick_value = sym_info.trade_tick_value
+    tick_size = sym_info.trade_tick_size
+    
+    if tick_value == 0 or tick_size == 0:
+        return sym_info.volume_min
+
+    ticks_per_pip = PIP_VALUE / tick_size
+    loss_value_per_lot = sl_pips * ticks_per_pip * tick_value
+    
+    if loss_value_per_lot == 0:
+        return sym_info.volume_min
+        
+    lot = risk_amount / loss_value_per_lot
+    
+    # Round to nearest step
+    step = sym_info.volume_step
+    if step > 0:
+        lot = round(lot / step) * step
+        
+    # Constrain to min/max
+    lot = max(sym_info.volume_min, min(lot, sym_info.volume_max))
+    
+    return float(round(lot, 2))
+
 def get_open_position(magic: int) -> Optional[object]:
     """Return open position for GBPUSD placed by this bot, or None."""
     positions = mt5.positions_get(symbol=SYMBOL)
@@ -526,6 +559,14 @@ def place_order_for_all_users(direction: str) -> bool:
             sym_info = mt5.symbol_info(SYMBOL)
             point = sym_info.point
             pips_to_pts = int(round(PIP_VALUE / point))
+            
+            # Calculate dynamic lot size based on balance
+            account_info = mt5.account_info()
+            if account_info is None:
+                continue
+                
+            balance = account_info.balance
+            dynamic_lot = calculate_lot_size(balance, RISK_PERCENT, STOP_LOSS_PIP, sym_info)
 
             if direction == "buy":
                 price    = tick.ask
@@ -541,7 +582,7 @@ def place_order_for_all_users(direction: str) -> bool:
             request = {
                 "action":    mt5.TRADE_ACTION_DEAL,
                 "symbol":    SYMBOL,
-                "volume":    LOT_SIZE,
+                "volume":    dynamic_lot,
                 "type":      order_type,
                 "price":     price,
                 "sl":        round(sl, 5),
@@ -558,7 +599,7 @@ def place_order_for_all_users(direction: str) -> bool:
                 log.error(f"Order failed for user {login}: {result}")
                 continue
 
-            log.info(f"✅ ORDER PLACED for {login} | {direction.upper()} {SYMBOL} @ {price:.5f} | SL={sl:.5f} | TP={tp:.5f}")
+            log.info(f"✅ ORDER PLACED for {login} | {direction.upper()} {SYMBOL} @ {price:.5f} | Lot={dynamic_lot} | SL={sl:.5f} | TP={tp:.5f}")
             
             # Save trade to Supabase
             save_trade({
@@ -752,7 +793,7 @@ def run():
         mt5.shutdown()
         return
 
-    log.info(f"Symbol: {SYMBOL} | Lot: {LOT_SIZE} | TP: {TAKE_PROFIT_PIP}p | SL: {STOP_LOSS_PIP}p")
+    log.info(f"Symbol: {SYMBOL} | Risk: {RISK_PERCENT}% | TP: {TAKE_PROFIT_PIP}p | SL: {STOP_LOSS_PIP}p")
     log.info(f"Session: {SESSION_START_HOUR:02d}:00–{SESSION_END_HOUR:02d}:00 ({TIMEZONE})")
     log.info("Polling every 10 seconds...")
     log.info("═" * 70)
