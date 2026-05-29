@@ -1492,20 +1492,36 @@
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (!session) throw new Error("Non connecté");
 
-                // We simulate a file upload by just passing the filename for the demo
-                // In production, this would use supabaseClient.storage.from('receipts').upload(...)
-                const mockReceiptUrl = receiptInput.files[0].name;
+                // 1. Upload file to Supabase Storage
+                const file = receiptInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${session.user.id}_${Date.now()}.${fileExt}`;
+                const filePath = `transfers/${fileName}`;
 
-                const { error } = await supabaseClient
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('receipts')
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    throw new Error("Erreur lors de l'upload de l'image: " + uploadError.message);
+                }
+
+                // 2. Get Public URL
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('receipts')
+                    .getPublicUrl(filePath);
+
+                // 3. Save to database
+                const { error: dbError } = await supabaseClient
                     .from('subscriptions')
                     .insert([{
                         user_id: session.user.id,
                         plan_name: modalPlanName.innerText,
                         status: 'PENDING',
-                        payment_proof_url: mockReceiptUrl
+                        payment_proof_url: publicUrl
                     }]);
 
-                if (error) throw error;
+                if (dbError) throw dbError;
 
                 paymentFormContainer.classList.add('hidden');
                 paymentPendingContainer.classList.remove('hidden');
