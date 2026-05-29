@@ -467,14 +467,14 @@
                                     <label class="block text-xs font-medium text-slate-400 mb-1">Broker Name</label>
                                     <div class="relative">
                                         <i data-lucide="briefcase" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                        <input type="text" placeholder="e.g. IC Markets, Exness" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        <input type="text" id="mt5broker" placeholder="e.g. IC Markets, Exness" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-slate-400 mb-1">Server Name</label>
                                     <div class="relative">
                                         <i data-lucide="globe" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                        <input type="text" placeholder="e.g. ICMarkets-Live01" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        <input type="text" id="mt5server" placeholder="e.g. ICMarkets-Live01" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
                                     </div>
                                 </div>
                             </div>
@@ -484,13 +484,13 @@
                                     <label class="block text-xs font-medium text-slate-400 mb-1">MT5 Login ID</label>
                                     <div class="relative">
                                         <i data-lucide="user-square" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                        <input type="text" placeholder="Account Number" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        <input type="text" id="mt5login" placeholder="Account Number" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-slate-400 mb-1">Account Type</label>
                                     <div class="relative">
-                                        <select class="input-dark w-full rounded-xl px-4 py-3 text-sm appearance-none cursor-pointer">
+                                        <select id="mt5type" class="input-dark w-full rounded-xl px-4 py-3 text-sm appearance-none cursor-pointer">
                                             <option>Live Account</option>
                                             <option>Demo Account</option>
                                         </select>
