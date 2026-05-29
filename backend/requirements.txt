@@ -1,0 +1,4 @@
+supabase>=2.3.0
+MetaTrader5>=5.0.43
+python-dotenv>=1.0.0
+cryptography>=41.0.0
