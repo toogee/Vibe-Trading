@@ -298,6 +298,10 @@
         </div>
     </div>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
@@ -402,17 +406,40 @@
         });
 
         // Submit Animation
-        signupForm.addEventListener('submit', (e) => {
+        signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             submitBtn.disabled = true;
             document.getElementById('btnText').classList.add('hidden');
             document.getElementById('spinner').classList.remove('hidden');
 
-            // Simulate API Call
-            setTimeout(() => {
-                window.location.href = 'index.html'; // Redirect to dashboard/home after success
-            }, 2000);
+            const email = document.getElementById('email').value;
+            const password = passwordInput.value;
+            const fullName = document.getElementById('fullName').value;
+            const username = document.getElementById('username').value;
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            username: username
+                        }
+                    }
+                });
+
+                if (error) throw error;
+                
+                alert("Inscription réussie ! Vous pouvez maintenant vous connecter.");
+                window.location.href = 'login.html';
+            } catch (error) {
+                alert("Erreur lors de l'inscription : " + error.message);
+                submitBtn.disabled = false;
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('spinner').classList.add('hidden');
+            }
         });
     </script>
 </body>

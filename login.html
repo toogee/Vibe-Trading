@@ -290,6 +290,10 @@
         </div>
     </div>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
@@ -326,18 +330,32 @@
         checkFormValidity();
 
         // Submit Animation
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             submitBtn.disabled = true;
             document.getElementById('btnText').classList.add('hidden');
             document.getElementById('spinner').classList.remove('hidden');
 
-            // Simulate API Call
-            setTimeout(() => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+                
                 // Redirect to dashboard
                 window.location.href = 'dashboard.html';
-            }, 2000);
+            } catch (error) {
+                alert("Erreur de connexion : " + error.message);
+                submitBtn.disabled = false;
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('spinner').classList.add('hidden');
+            }
         });
     </script>
 </body>
