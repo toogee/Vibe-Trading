@@ -272,8 +272,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${statusBadge}</td>
                     <td class="text-right">
                         ${payment.status === 'PENDING' ? `
-                            <button class="text-emerald-400 hover:text-white transition-colors mr-3" title="Approve"><i data-lucide="check" class="w-4 h-4"></i></button>
-                            <button class="text-rose-400 hover:text-white transition-colors" title="Reject"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            <button onclick="updatePaymentStatus('${payment.id}', 'ACTIVE')" class="text-emerald-400 hover:text-white transition-colors mr-3" title="Approve"><i data-lucide="check" class="w-4 h-4"></i></button>
+                            <button onclick="updatePaymentStatus('${payment.id}', 'INACTIVE')" class="text-rose-400 hover:text-white transition-colors" title="Reject"><i data-lucide="x" class="w-4 h-4"></i></button>
                         ` : ''}
                     </td>
                 `;
@@ -296,6 +296,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No payments found.</td></tr>`;
         }
     }
+
+    // Export function to global scope so onclick handlers can access it
+    window.updatePaymentStatus = async function(paymentId, newStatus) {
+        if(!confirm(`Êtes-vous sûr de vouloir ${newStatus === 'ACTIVE' ? 'APPROUVER' : 'REJETER'} ce paiement ?`)) return;
+
+        try {
+            const { error } = await supabaseClient
+                .from('subscriptions')
+                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .eq('id', paymentId);
+
+            if(error) throw error;
+            
+            // Reload table
+            loadPayments();
+            
+        } catch (err) {
+            console.error("Update Error:", err);
+            alert("Erreur lors de la mise à jour: " + err.message);
+        }
+    };
 
     // --- 8. LOGOUT ---
     const logoutBtn = document.getElementById('logoutBtn');
