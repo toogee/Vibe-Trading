@@ -227,7 +227,7 @@
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
                 <div>
-                    <h2 class="text-lg font-semibold hidden sm:block">Welcome back, Michelson</h2>
+                    <h2 id="headerUserName" class="text-lg font-semibold hidden sm:block">Welcome back, User</h2>
                     <p class="text-xs text-sky-400 font-medium">London Session Active</p>
                 </div>
             </div>
@@ -247,7 +247,7 @@
                 <!-- Avatar -->
                 <div id="headerProfileAvatar" class="flex items-center gap-3 pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition-opacity">
                     <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-sky-500 p-0.5 relative">
-                        <img src="https://ui-avatars.com/api/?name=Michelson&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
+                        <img id="headerUserAvatar" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
                         <div class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900"></div>
                     </div>
                 </div>
@@ -773,7 +773,7 @@
                                 <!-- Avatar Upload -->
                                 <div class="flex items-center gap-6 mb-8 p-4 rounded-2xl bg-slate-800/30 border border-slate-700/50">
                                     <div class="w-20 h-20 rounded-full bg-slate-800 border-2 border-sky-500 p-1 relative group cursor-pointer">
-                                        <img src="https://ui-avatars.com/api/?name=Michelson&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
+                                        <img id="settingsUserAvatar" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
                                         <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                             <i data-lucide="camera" class="w-6 h-6 text-white"></i>
                                         </div>
@@ -793,21 +793,21 @@
                                         <label class="block text-xs font-medium text-slate-400 mb-1">Nom Complet</label>
                                         <div class="relative">
                                             <i data-lucide="user" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                            <input type="text" value="Michelson" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                            <input id="settingsFullName" type="text" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
                                         </div>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-slate-400 mb-1">Nom d'utilisateur</label>
                                         <div class="relative">
                                             <i data-lucide="at-sign" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                            <input type="text" value="michelson_fx" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                            <input id="settingsUsername" type="text" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
                                         </div>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-slate-400 mb-1">Adresse Email</label>
                                         <div class="relative">
                                             <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                            <input type="email" value="contact@michelson.com" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                            <input id="settingsEmail" type="email" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm" readonly>
                                         </div>
                                     </div>
                                     <div>
@@ -1488,11 +1488,43 @@
     <script src="supabaseClient.js"></script>
     
     <script>
-        // Check Session
+        // Check Session and Load Profile
         async function checkSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
                 window.location.href = 'login.html';
+                return;
+            }
+
+            // Fetch Profile
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile) {
+                const userName = profile.full_name || 'User';
+                const userEmail = profile.email || session.user.email;
+                const encodedName = encodeURIComponent(userName);
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodedName}&background=0D8ABC&color=fff`;
+
+                // Update Header
+                const headerUserName = document.getElementById('headerUserName');
+                const headerUserAvatar = document.getElementById('headerUserAvatar');
+                if(headerUserName) headerUserName.innerText = `Welcome back, ${userName}`;
+                if(headerUserAvatar) headerUserAvatar.src = avatarUrl;
+
+                // Update Settings Tab
+                const settingsUserAvatar = document.getElementById('settingsUserAvatar');
+                const settingsFullName = document.getElementById('settingsFullName');
+                const settingsUsername = document.getElementById('settingsUsername');
+                const settingsEmail = document.getElementById('settingsEmail');
+
+                if(settingsUserAvatar) settingsUserAvatar.src = avatarUrl;
+                if(settingsFullName) settingsFullName.value = userName;
+                if(settingsUsername) settingsUsername.value = userName.toLowerCase().replace(/\s+/g, '_');
+                if(settingsEmail) settingsEmail.value = userEmail;
             }
         }
         checkSession();
