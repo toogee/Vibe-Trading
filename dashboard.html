@@ -1003,6 +1003,70 @@
 
             </div> <!-- END TAB 4 -->
 
+            <!-- TAB: TRADES -->
+            <div id="tab-trades" class="tab-content max-w-7xl mx-auto space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold font-heading">Live Trades</h1>
+                    <p class="text-slate-400 text-sm">Historique complet de vos transactions en temps r&eacute;el</p>
+                </div>
+                <div class="glass-card rounded-2xl p-5 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700 text-sm">
+                                    <th class="pb-3 px-4 font-medium">Pair</th>
+                                    <th class="pb-3 px-4 font-medium">Type</th>
+                                    <th class="pb-3 px-4 font-medium">Entr&eacute;e</th>
+                                    <th class="pb-3 px-4 font-medium">SL / TP</th>
+                                    <th class="pb-3 px-4 font-medium">Profit</th>
+                                    <th class="pb-3 px-4 font-medium text-right">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullTradesBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PERFORMANCE -->
+            <div id="tab-stats" class="tab-content max-w-7xl mx-auto space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold font-heading">Performance</h1>
+                    <p class="text-slate-400 text-sm">Analyses avanc&eacute;es et statistiques de votre compte</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Total Trades</h3>
+                        <p id="statsTotalTrades" class="text-3xl font-bold text-white">0</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Trades Gagnants</h3>
+                        <p id="statsWonTrades" class="text-3xl font-bold text-emerald-400">0</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Trades Perdants</h3>
+                        <p id="statsLostTrades" class="text-3xl font-bold text-rose-400">0</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Statistiques Globales</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center pb-4 border-b border-slate-700/50">
+                            <span class="text-slate-400">Profit Net Total</span>
+                            <span id="statsTotalProfit" class="font-bold text-lg">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pb-4 border-b border-slate-700/50">
+                            <span class="text-slate-400">Taux de R&eacute;ussite (Win Rate)</span>
+                            <span id="statsWinRate" class="font-bold text-lg">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Placeholder for other tabs -->
             <div id="tab-empty" class="tab-content max-w-7xl mx-auto text-center py-20">
 
@@ -1571,27 +1635,38 @@
             }
 
             const liveTradesBody = document.getElementById('liveTradesBody');
+            const fullTradesBody = document.getElementById('fullTradesBody');
             const dashTotalProfit = document.getElementById('dashTotalProfit');
             const dashWinRate = document.getElementById('dashWinRate');
             const dashWinRateBar = document.getElementById('dashWinRateBar');
 
+            // Performance Tab Elements
+            const statsTotalTrades = document.getElementById('statsTotalTrades');
+            const statsWonTrades = document.getElementById('statsWonTrades');
+            const statsLostTrades = document.getElementById('statsLostTrades');
+            const statsTotalProfit = document.getElementById('statsTotalProfit');
+            const statsWinRate = document.getElementById('statsWinRate');
+
             function renderTrades(trades) {
                 if(!trades || trades.length === 0) {
-                    liveTradesBody.innerHTML = `
+                    const emptyState = `
                         <tr>
                             <td colspan="6" class="py-12 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <i data-lucide="inbox" class="w-8 h-8 text-slate-600 mb-3"></i>
-                                    <p class="text-slate-400 font-medium">Aucune transaction enregistrée</p>
+                                    <p class="text-slate-400 font-medium">Aucune transaction enregistr&eacute;e</p>
                                 </div>
                             </td>
                         </tr>
                     `;
+                    if(liveTradesBody) liveTradesBody.innerHTML = emptyState;
+                    if(fullTradesBody) fullTradesBody.innerHTML = emptyState;
                     lucide.createIcons();
                     return;
                 }
 
-                liveTradesBody.innerHTML = '';
+                if(liveTradesBody) liveTradesBody.innerHTML = '';
+                if(fullTradesBody) fullTradesBody.innerHTML = '';
                 let totalProfit = 0;
                 let wonTrades = 0;
                 let completedTrades = 0;
@@ -1628,15 +1703,27 @@
                         <td class="py-3 px-4 font-bold ${profitColor}">$${trade.profit.toFixed(2)}</td>
                         <td class="py-3 px-4 text-right">${statusBadge}</td>
                     `;
-                    liveTradesBody.appendChild(tr);
+                    if(liveTradesBody) liveTradesBody.appendChild(tr);
+                    if(fullTradesBody) fullTradesBody.appendChild(tr.cloneNode(true));
                 });
                 
                 // Update Dashboard Metrics
-                dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                if(dashTotalProfit) dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                if(statsTotalProfit) statsTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                
+                if(statsTotalTrades) statsTotalTrades.innerText = completedTrades + (trades.length - completedTrades); // include OPEN
+                if(statsWonTrades) statsWonTrades.innerText = wonTrades;
+                if(statsLostTrades) statsLostTrades.innerText = (completedTrades - wonTrades);
+
                 if(completedTrades > 0) {
                     const winRate = Math.round((wonTrades / completedTrades) * 100);
-                    dashWinRate.innerText = `${winRate}%`;
-                    dashWinRateBar.style.width = `${winRate}%`;
+                    if(dashWinRate) dashWinRate.innerText = `${winRate}%`;
+                    if(dashWinRateBar) dashWinRateBar.style.width = `${winRate}%`;
+                    if(statsWinRate) statsWinRate.innerText = `${winRate}%`;
+                } else {
+                    if(dashWinRate) dashWinRate.innerText = `0%`;
+                    if(dashWinRateBar) dashWinRateBar.style.width = `0%`;
+                    if(statsWinRate) statsWinRate.innerText = `0%`;
                 }
             }
 
