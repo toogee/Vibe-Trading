@@ -358,19 +358,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             type,
             async () => {
                 try {
-                    const { error } = await supabaseClient
+                    const { data, error } = await supabaseClient
                         .from('subscriptions')
                         .update({ status: newStatus, updated_at: new Date().toISOString() })
-                        .eq('id', paymentId);
+                        .eq('id', paymentId)
+                        .select();
 
                     if(error) throw error;
+                    
+                    if (!data || data.length === 0) {
+                        throw new Error("Mise à jour bloquée par la sécurité (RLS). Avez-vous exécuté la commande SQL dans Supabase ?");
+                    }
                     
                     // Reload table
                     loadPayments();
                     
                 } catch (err) {
                     console.error("Update Error:", err);
-                    alert("Erreur lors de la mise à jour: " + err.message);
+                    alert("Erreur: " + err.message);
                 }
             }
         );
