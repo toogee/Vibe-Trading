@@ -30,6 +30,55 @@
     </script>
     
     <!-- Custom CSS -->
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-[#030712] text-slate-200 font-sans antialiased;
+            }
+        }
+        
+        @layer components {
+            .admin-glass {
+                @apply bg-[#0f172a]/70 backdrop-blur-xl border border-slate-700/50 shadow-2xl;
+            }
+            .admin-glass-glow {
+                @apply bg-[#0f172a]/80 backdrop-blur-xl border border-[#38bdf8]/30 shadow-[0_0_30px_rgba(56,189,248,0.1)];
+            }
+            .nav-item {
+                @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all duration-300 font-medium;
+            }
+            .nav-item.active {
+                @apply bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.15)];
+            }
+            .glow-btn {
+                @apply bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-bold rounded-xl hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all duration-300;
+            }
+            .admin-table {
+                @apply w-full text-left border-collapse whitespace-nowrap;
+            }
+            .admin-table th {
+                @apply pb-3 px-4 font-semibold text-xs uppercase tracking-wider text-slate-500 border-b border-slate-700/50;
+            }
+            .admin-table td {
+                @apply py-4 px-4 border-b border-slate-700/50 text-sm;
+            }
+            .badge {
+                @apply px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border;
+            }
+            .badge-success {
+                @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)];
+            }
+            .badge-danger {
+                @apply bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.1)];
+            }
+            .badge-warning {
+                @apply bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)];
+            }
+            .badge-info {
+                @apply bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_10px_rgba(56,189,248,0.1)];
+            }
+        }
+    </style>
     <link rel="stylesheet" href="css/admin.css">
     
     <!-- Icons -->
