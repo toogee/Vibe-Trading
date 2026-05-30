@@ -171,26 +171,26 @@
     </div>
 
     <!-- Main Card -->
-    <div class="w-full max-w-[520px] z-10">
-        <div class="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+    <div class="w-full max-w-[440px] z-10">
+        <div class="glass-card rounded-[2rem] p-8 sm:p-10 relative overflow-hidden ring-1 ring-white/10 shadow-2xl shadow-blue-900/20">
             <!-- Glare effect -->
             <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"></div>
 
             <!-- Header -->
-            <div class="text-center mb-10">
-                <div class="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-sky-500/30">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-5 shadow-[0_0_20px_rgba(56,189,248,0.3)] border border-sky-400/30">
                     <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
                 </div>
-                <h1 class="font-heading text-3xl font-bold mb-3 tracking-tight">Créer un Compte</h1>
-                <p class="text-slate-400 text-sm max-w-[85%] mx-auto leading-relaxed">
+                <h1 class="font-heading text-2xl font-bold mb-2 tracking-tight text-white">Créer un Compte</h1>
+                <p class="text-slate-400 text-[13px] max-w-[90%] mx-auto leading-relaxed">
                     Rejoignez <span class="text-sky-400 font-semibold">Vibe Trading</span> et accédez à notre dashboard de scalping automatisé GBPUSD.
                 </p>
             </div>
 
             <!-- Form -->
-            <form id="signupForm" class="space-y-5">
+            <form id="signupForm" class="space-y-4">
                 <!-- Name & Username -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="input-group">
                         <i data-lucide="user" class="w-5 h-5 input-icon"></i>
                         <input type="text" id="fullName" placeholder="Nom Complet" required class="input-field">
@@ -240,18 +240,15 @@
                     </button>
                 </div>
 
-                <!-- Checkbox -->
-                <label class="custom-checkbox flex items-start gap-3 cursor-pointer group pt-2">
-                    <div class="relative mt-1">
-                        <input type="checkbox" id="terms" class="sr-only">
-                        <div class="w-5 h-5 border-2 border-slate-600 rounded bg-slate-800/50 flex items-center justify-center transition-colors">
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
-                        </div>
+                <!-- Terms -->
+                <div class="flex items-start gap-3 mt-2">
+                    <div class="flex items-center h-5 mt-0.5">
+                        <input id="terms" type="checkbox" required class="w-4 h-4 rounded border-slate-700 bg-slate-800/50 text-sky-500 focus:ring-sky-500 focus:ring-offset-slate-900 cursor-pointer">
                     </div>
-                    <span class="text-sm text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed">
-                        J'accepte les <a href="#" class="text-sky-400 hover:text-sky-300">Conditions d'utilisation</a> et la <a href="#" class="text-sky-400 hover:text-sky-300">Politique de confidentialité</a>
-                    </span>
-                </label>
+                    <label for="terms" class="text-[13px] text-slate-400 leading-tight">
+                        J'accepte les <a href="#" class="text-sky-400 hover:text-sky-300 transition-colors">Conditions d'utilisation</a> et la <a href="#" class="text-sky-400 hover:text-sky-300 transition-colors">Politique de confidentialité</a>
+                    </label>
+                </div>
 
                 <!-- Submit Button -->
                 <button type="submit" id="submitBtn" disabled class="btn-primary mt-6 group">
