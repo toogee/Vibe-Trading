@@ -12,22 +12,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    // Refresh session pour avoir les derniers app_metadata
+    await supabaseClient.auth.refreshSession();
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-    if (!profile || profile.role !== 'admin') {
-        // TEMPORARY BYPASS: We let the user in so they can see the design.
-        // We will re-enable this security later.
-        console.warn("User is not admin, but bypassing security for testing.");
+    // Verifier admin par role OU par email
+    const ADMIN_EMAILS = ['tidem999@gmail.com'];
+    const isAdmin = user?.app_metadata?.role === 'admin'
+                 || ADMIN_EMAILS.includes(user?.email);
+
+    if (!isAdmin) {
+        // Rediriger les non-admins vers le dashboard
+        window.location.href = '../dashboard.html';
+        return;
     }
 
-    // User is Admin, remove overlay and setup info
+    // Admin confirme — retirer l'overlay
     loadingOverlay.classList.add('hidden');
-    document.getElementById('adminName').innerText = profile.full_name || 'Administrator';
+
+    // Afficher le nom de l'admin
+    const adminNameEl = document.getElementById('adminName');
+    if (adminNameEl) {
+        const displayName = user?.user_metadata?.full_name 
+                         || user?.email?.split('@')[0] 
+                         || 'Administrator';
+        adminNameEl.innerText = displayName;
+    }
+
+    // Mettre a jour l'avatar
+    const avatarEl = document.querySelector('#logoutBtn img');
+    if (avatarEl && user?.email) {
+        avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email)}&background=0D8ABC&color=fff`;
+    }
 
 
     // --- 2. TAB NAVIGATION ---
@@ -230,7 +246,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const profitColor = trade.profit > 0 ? 'text-emerald-400' : (trade.profit < 0 ? 'text-rose-400' : 'text-slate-300');
                 const statusBadge = trade.status === 'OPEN' 
                     ? '<span class="badge badge-info">OPEN</span>'
-                    : (trade.status === 'WON' ? '<span class="badge badge-success">WON</span>' : '<span class="badge badge-danger">LOST</span>');
+                    : (trade.status === 'WON' || trade.status === 'WIN')
+                        ? '<span class="badge badge-success">WIN ✓</span>'
+                        : '<span class="badge badge-danger">LOSS ✗</span>';
 
                 tr.innerHTML = `
                     <td class="text-slate-400 text-xs">${new Date(trade.open_time).toLocaleTimeString()}</td>

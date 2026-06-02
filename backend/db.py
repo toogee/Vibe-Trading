@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import logging
@@ -58,3 +59,37 @@ def update_mt5_balance(account_id: str, balance: float, equity: float):
         }).eq("id", account_id).execute()
     except Exception as e:
         logging.error(f"Error updating balance for account {account_id}: {e}")
+
+# ─── BOT CONTROL (Dashboard Start/Stop) ───────────────────────────────────────
+
+def get_trading_enabled() -> bool:
+    """Returns True if the bot is authorized to trade (set via Dashboard)."""
+    try:
+        response = supabase.table("bot_control").select("trading_enabled").eq("id", 1).execute()
+        if response.data:
+            return response.data[0].get("trading_enabled", False)
+        return False
+    except Exception as e:
+        logging.error(f"Error reading bot_control: {e}")
+        return True  # Fail-safe: continue trading if DB unreachable
+
+def set_trading_enabled(enabled: bool):
+    """Enable or disable bot trading via Dashboard toggle."""
+    try:
+        supabase.table("bot_control").upsert({
+            "id": 1,
+            "trading_enabled": enabled,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+    except Exception as e:
+        logging.error(f"Error setting bot_control: {e}")
+
+def update_bot_heartbeat():
+    """Called every 30s by the bot so Dashboard knows it's alive."""
+    try:
+        supabase.table("bot_control").upsert({
+            "id": 1,
+            "last_heartbeat": datetime.now(timezone.utc).isoformat()
+        }).execute()
+    except Exception as e:
+        logging.error(f"Error updating heartbeat: {e}")

@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Trading - Premium Dashboard</title>
+    <title>Vibe Trading — Tableau de Bord | Mon Espace Trading</title>
+    <meta name="description" content="Suivez vos performances de trading GBPUSD en temps réel. Statut du bot SSED V2, historique des trades, profit total et taux de réussite.">
+    <meta name="robots" content="noindex, nofollow">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0ea5e9">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -143,6 +152,64 @@
             #sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
             #sidebar.open { transform: translateX(0); }
         }
+
+        /* Bot Toggle Button */
+        .bot-toggle-btn {
+            position: relative;
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .bot-toggle-btn.state-active {
+            background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.1));
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.4);
+            box-shadow: 0 0 20px rgba(239,68,68,0.15);
+        }
+        .bot-toggle-btn.state-active:hover {
+            background: linear-gradient(135deg, rgba(239,68,68,0.3), rgba(220,38,38,0.2));
+            box-shadow: 0 0 30px rgba(239,68,68,0.25);
+            transform: translateY(-1px);
+        }
+        .bot-toggle-btn.state-inactive {
+            background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1));
+            color: #34d399;
+            border: 1px solid rgba(16,185,129,0.4);
+            box-shadow: 0 0 20px rgba(16,185,129,0.15);
+        }
+        .bot-toggle-btn.state-inactive:hover {
+            background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(5,150,105,0.2));
+            box-shadow: 0 0 30px rgba(16,185,129,0.25);
+            transform: translateY(-1px);
+        }
+        .bot-toggle-btn.state-loading {
+            background: rgba(51,65,85,0.3);
+            color: #94a3b8;
+            border: 1px solid rgba(51,65,85,0.5);
+            cursor: not-allowed;
+        }
+        .bot-status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-active { background: #34d399; box-shadow: 0 0 8px #34d399; animation: pulse-green 2s infinite; }
+        .dot-inactive { background: #6b7280; }
+        .dot-offline { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse-red 2s infinite; }
+        @keyframes pulse-green { 0%,100%{box-shadow:0 0 6px #34d399;} 50%{box-shadow:0 0 14px #34d399;} }
+        @keyframes pulse-red   { 0%,100%{box-shadow:0 0 6px #ef4444;} 50%{box-shadow:0 0 14px #ef4444;} }
     </style>
 </head>
 <body class="flex h-screen text-sm sm:text-base font-sans">
@@ -214,6 +281,18 @@
                 <i data-lucide="mail" class="w-5 h-5"></i>
                 Contact
             </a>
+
+            <!-- ADMIN SECTION — Cache par defaut, visible seulement pour admins -->
+            <div id="adminNavSection" class="hidden">
+                <div class="text-xs font-semibold mt-8 mb-4 px-2 tracking-wider"
+                     style="color: #f59e0b;">ADMINISTRATION</div>
+                <a href="admin/index.html" class="nav-item"
+                   style="color: #fbbf24; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px;">
+                    <i data-lucide="shield" class="w-5 h-5" style="color:#f59e0b;"></i>
+                    <span>Admin</span>
+                    <span class="ml-auto text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">ADMIN</span>
+                </a>
+            </div>
         </div>
 
         <!-- Logout -->
@@ -285,19 +364,28 @@
 
                 <!-- STATS CARDS GRID -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- Card 1 -->
-                    <div class="glass-card rounded-2xl p-5">
-                        <div class="flex justify-between items-start mb-4">
+                    <!-- Card 1 — Bot Control (Interactif) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
                             <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-                                <i data-lucide="power" class="w-5 h-5"></i>
+                                <i data-lucide="cpu" class="w-5 h-5"></i>
                             </div>
-                            <span class="badge badge-success flex items-center gap-1">
-                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                                ONLINE
-                            </span>
+                            <!-- Indicateur statut en temps réel -->
+                            <div id="botStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800 border border-slate-700">
+                                <span id="botStatusDot" class="bot-status-dot dot-inactive"></span>
+                                <span id="botStatusText" class="text-xs font-bold text-slate-400">Chargement...</span>
+                            </div>
                         </div>
-                        <p class="text-slate-400 text-sm mb-1">Statut du Bot</p>
-                        <h3 class="text-2xl font-bold">SSED V2</h3>
+                        <div>
+                            <p class="text-slate-400 text-xs mb-0.5">Statut du Bot</p>
+                            <h3 class="text-xl font-bold">SSED V2</h3>
+                            <p id="botHeartbeatText" class="text-xs text-slate-500 mt-0.5">--</p>
+                        </div>
+                        <!-- Bouton Start/Stop (Admin uniquement) -->
+                        <button id="botToggleBtn" class="bot-toggle-btn state-loading" onclick="toggleBot()" disabled>
+                            <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+                            <span id="botToggleBtnText">Chargement...</span>
+                        </button>
                     </div>
 
                     <!-- Card 2 -->
@@ -2183,19 +2271,19 @@
                 filteredTrades.forEach(trade => {
                     // Accumulate stats
                     totalProfit += parseFloat(trade.profit || 0);
-                    if(trade.status === 'WON' || trade.status === 'LOST') {
+                    if(trade.status === 'WON' || trade.status === 'WIN' || trade.status === 'LOST' || trade.status === 'LOSS') {
                         completedTrades++;
-                        if(trade.status === 'WON') wonTrades++;
+                        if(trade.status === 'WON' || trade.status === 'WIN') wonTrades++;
                     }
 
                     // Render Row
                     const typeColor = trade.type === 'BUY' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10';
                     const profitColor = trade.profit > 0 ? 'text-emerald-400' : (trade.profit < 0 ? 'text-rose-400' : 'text-slate-300');
-                    const statusBadge = trade.status === 'OPEN' 
+                    const statusBadge = (trade.status === 'OPEN')
                         ? '<span class="px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold">OPEN</span>'
-                        : (trade.status === 'WON' 
-                            ? '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">WON</span>'
-                            : '<span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">LOST</span>');
+                        : (trade.status === 'WON' || trade.status === 'WIN')
+                            ? '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">WIN ✓</span>'
+                            : '<span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">LOSS ✗</span>';
 
                     const tr = document.createElement('tr');
                     tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors";
@@ -2234,6 +2322,40 @@
                     if(dashWinRateBar) dashWinRateBar.style.width = `0%`;
                     if(statsWinRate) statsWinRate.innerText = `0%`;
                 }
+
+                // ── Calcul Drawdown Max ──────────────────────────────────────
+                // = pire sequence de pertes consecutives / balance estimee
+                const closedTrades = filteredTrades.filter(t =>
+                    t.status === 'WIN' || t.status === 'WON' ||
+                    t.status === 'LOSS' || t.status === 'LOST'
+                ).slice().reverse(); // ordre chronologique
+
+                let maxDrawdown = 0;
+                let peak = 0;
+                let runningPnl = 0;
+                closedTrades.forEach(t => {
+                    runningPnl += parseFloat(t.profit || 0);
+                    if(runningPnl > peak) peak = runningPnl;
+                    const dd = peak - runningPnl;
+                    if(dd > maxDrawdown) maxDrawdown = dd;
+                });
+
+                // Exprimer en % par rapport au pic de profit (ou balance de ref $100)
+                const refBalance = Math.max(peak, 100);
+                const ddPct = refBalance > 0 ? (maxDrawdown / refBalance * 100) : 0;
+                const ddEl  = document.getElementById('dashMaxDrawdown');
+                const ddBar = document.getElementById('dashMaxDrawdownBar');
+                if(ddEl)  ddEl.innerText = `${ddPct.toFixed(1)}%`;
+                if(ddBar) ddBar.style.width = `${Math.min(ddPct, 100)}%`;
+                // Couleur selon severite
+                if(ddEl) {
+                    ddEl.className = ddPct === 0
+                        ? 'text-3xl font-bold font-heading text-emerald-400'
+                        : ddPct < 5
+                            ? 'text-3xl font-bold font-heading text-yellow-400'
+                            : 'text-3xl font-bold font-heading text-rose-400';
+                }
+
             }
 
             // 1. Initial Fetch
@@ -2288,6 +2410,167 @@
         // Initialize Realtime
         loadAndSubscribeToTrades();
 
+        // ═══════════════════════════════════════════════════════════
+        // BOT CONTROL — Start / Stop depuis le Dashboard
+        // ═══════════════════════════════════════════════════════════
+
+        let _botTradingEnabled = false;
+
+        function updateBotUI(tradingEnabled, lastHeartbeat) {
+            const btn     = document.getElementById('botToggleBtn');
+            const btnText = document.getElementById('botToggleBtnText');
+            const dot     = document.getElementById('botStatusDot');
+            const statusT = document.getElementById('botStatusText');
+            const heartEl = document.getElementById('botHeartbeatText');
+
+            if (!btn) return;
+
+            // Vérifie si le bot Python est "vivant" (heartbeat < 90 secondes)
+            let botAlive = false;
+            if (lastHeartbeat) {
+                const diff = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000;
+                botAlive = diff < 90;
+                const mins = Math.floor(diff / 60);
+                const secs = Math.floor(diff % 60);
+                heartEl.innerText = botAlive
+                    ? `Actif il y a ${mins > 0 ? mins + 'm ' : ''}${secs}s`
+                    : `Hors ligne depuis ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+            } else {
+                heartEl.innerText = 'Bot Python non démarré';
+            }
+
+            _botTradingEnabled = tradingEnabled;
+
+            if (!botAlive) {
+                // Bot Python pas en cours d'exécution
+                dot.className = 'bot-status-dot dot-offline';
+                statusT.innerText = 'HORS LIGNE';
+                statusT.className = 'text-xs font-bold text-red-400';
+                btn.className = 'bot-toggle-btn state-loading';
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i><span>Bot Déconnecté</span>`;
+            } else if (tradingEnabled) {
+                // Bot actif — trading en cours
+                dot.className = 'bot-status-dot dot-active';
+                statusT.innerText = 'TRADING ACTIF';
+                statusT.className = 'text-xs font-bold text-emerald-400';
+                btn.className = 'bot-toggle-btn state-active';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Arrêter le Trading</span>`;
+            } else {
+                // Bot en veille — pas de trading
+                dot.className = 'bot-status-dot dot-inactive';
+                statusT.innerText = 'EN VEILLE';
+                statusT.className = 'text-xs font-bold text-slate-400';
+                btn.className = 'bot-toggle-btn state-inactive';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Démarrer le Trading</span>`;
+            }
+            // Rafraîchir les icônes Lucide
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function fetchBotStatus() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('bot_control')
+                    .select('trading_enabled, last_heartbeat')
+                    .eq('id', 1)
+                    .single();
+                if (data) {
+                    updateBotUI(data.trading_enabled, data.last_heartbeat);
+                } else {
+                    // Ligne inexistante — créer avec valeurs par défaut
+                    updateBotUI(false, null);
+                }
+            } catch(e) {
+                console.warn('bot_control fetch error:', e);
+                updateBotUI(false, null);
+            }
+        }
+
+        async function toggleBot() {
+            const btn = document.getElementById('botToggleBtn');
+            if (!btn || btn.disabled) return;
+
+            const newState = !_botTradingEnabled;
+            btn.disabled = true;
+            btn.className = 'bot-toggle-btn state-loading';
+            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>${newState ? 'Activation...' : 'Arrêt...'}</span>`;
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('bot_control')
+                    .upsert({ id: 1, trading_enabled: newState }, { onConflict: 'id' });
+
+                if (error) throw error;
+
+                // Feedback visuel immédiat
+                setTimeout(fetchBotStatus, 500);
+            } catch(e) {
+                console.error('Toggle bot error:', e);
+                alert('Erreur: Impossible de changer l\'état du bot. Vérifiez votre connexion.');
+                fetchBotStatus(); // Restaurer l'état réel
+            }
+        }
+
+        // Charger le statut initial
+        fetchBotStatus();
+
+        // Rafraichir toutes les 20 secondes (pour le heartbeat)
+        setInterval(fetchBotStatus, 20000);
+
+        // Ecoute en temps reel les changements de bot_control
+        supabaseClient
+            .channel('bot-control-changes')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'bot_control' },
+                (payload) => {
+                    if (payload.new) {
+                        updateBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
+                    }
+                }
+            )
+            .subscribe();
+
+        // ═══════════════════════════════════════════════════════════
+        // ADMIN CHECK — Bouton visible seulement pour admins
+        // ═══════════════════════════════════════════════════════════
+        (async () => {
+            // Rafraichir session pour avoir les derniers app_metadata
+            await supabaseClient.auth.refreshSession();
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            // Double securite: verifier par role ET par email
+            const ADMIN_EMAILS = ['tidem999@gmail.com'];
+            const isAdmin = user?.app_metadata?.role === 'admin'
+                         || ADMIN_EMAILS.includes(user?.email);
+
+            const botBtn = document.getElementById('botToggleBtn');
+            if (!isAdmin && botBtn) {
+                botBtn.outerHTML = `
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/50">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span class="text-xs text-slate-500 font-medium">Controle Admin</span>
+                    </div>`;
+                if (window.lucide) lucide.createIcons();
+            }
+
+            // Afficher/cacher la section Admin dans le sidebar
+            const adminNavSection = document.getElementById('adminNavSection');
+            if (adminNavSection) {
+                if (isAdmin) {
+                    adminNavSection.classList.remove('hidden');
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    adminNavSection.classList.add('hidden');
+                }
+            }
+
+        })();
+
     </script>
+
 </body>
 </html>

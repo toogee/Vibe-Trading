@@ -32,7 +32,7 @@ from typing import Optional, Tuple, List, Dict
 # ─────────────────────────────────────────────────────────────────────────────
 # SAAS INTEGRATION
 # ─────────────────────────────────────────────────────────────────────────────
-from db import get_active_users, get_user_mt5_account, save_trade, update_mt5_status, update_mt5_balance
+from db import get_active_users, get_user_mt5_account, save_trade, update_mt5_status, update_mt5_balance, get_trading_enabled, update_bot_heartbeat
 from security import decrypt_password
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ ZONE_TOLERANCE_PIPS = 5
 MIN_CANDLE_BODY_PIPS = 2.0   # Minimum candle body to consider non-weak
 ADR_CONSOLIDATION_RATIO = 0.3  # If candle range < 30% of ADR → consolidating
 
-# Trend detection lookback in M5 bars
+# Trend detection lookback in M1 bars
 TREND_LOOKBACK = 20
 
 # Polling interval in seconds
@@ -588,6 +588,32 @@ def place_order_for_all_users(direction: str) -> bool:
                 tp       = price - TAKE_PROFIT_PIP * PIP_VALUE
                 order_type = mt5.ORDER_TYPE_SELL
 
+            # ── Vérifier stop level minimum du broker ───────────────────────
+            sym_info_check = mt5.symbol_info(SYMBOL)
+            if sym_info_check and sym_info_check.trade_stops_level > 0:
+                min_stop_pips = sym_info_check.trade_stops_level / 10.0
+                if STOP_LOSS_PIP < min_stop_pips:
+                    log.warning(f"⚠️  SL {STOP_LOSS_PIP}p < stop_level min {min_stop_pips}p — SL ajusté!")
+                    if direction == "buy":
+                        sl = price - (min_stop_pips + 2) * PIP_VALUE
+                    else:
+                        sl = price + (min_stop_pips + 2) * PIP_VALUE
+                if TAKE_PROFIT_PIP < min_stop_pips:
+                    log.warning(f"⚠️  TP {TAKE_PROFIT_PIP}p < stop_level min {min_stop_pips}p — TP ajusté!")
+                    if direction == "buy":
+                        tp = price + (min_stop_pips + 2) * PIP_VALUE
+                    else:
+                        tp = price - (min_stop_pips + 2) * PIP_VALUE
+
+            # Auto-détecter le filling mode supporté par le broker
+            filling_mode = mt5.ORDER_FILLING_IOC  # défaut
+            if sym_info.filling_mode & 1:    # FOK supporté
+                filling_mode = mt5.ORDER_FILLING_FOK
+            elif sym_info.filling_mode & 2:  # IOC supporté
+                filling_mode = mt5.ORDER_FILLING_IOC
+            elif sym_info.filling_mode & 4:  # RETURN supporté
+                filling_mode = mt5.ORDER_FILLING_RETURN
+
             request = {
                 "action":    mt5.TRADE_ACTION_DEAL,
                 "symbol":    SYMBOL,
@@ -600,7 +626,7 @@ def place_order_for_all_users(direction: str) -> bool:
                 "magic":     MAGIC_NUMBER,
                 "comment":   "Vibe_Trading_Bot",
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
+                "type_filling": filling_mode,
             }
 
             result = mt5.order_send(request)
@@ -645,7 +671,7 @@ def place_order_for_all_users(direction: str) -> bool:
 _seen_deal_tickets: set = set()
 
 def check_closed_trades():
-    """Check history for newly closed trades and update daily loss counter."""
+    """Check history for newly closed trades and update Supabase with real profit."""
     tz = pytz.timezone(TIMEZONE)
     today_start = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     today_start_utc = today_start.astimezone(pytz.utc)
@@ -667,6 +693,23 @@ def check_closed_trades():
         profit = deal.profit
         log.info(f"Closed trade ticket={deal.ticket} | profit={profit:.2f}")
         daily.record_trade_result(profit)
+
+        # ── Mettre à jour Supabase avec profit réel ──────────────────
+        try:
+            from db import supabase
+            # Trouver le trade OPEN correspondant dans Supabase (par ticket ou par open_time)
+            resp = supabase.table("trades").select("id").eq("status", "OPEN").eq("symbol", SYMBOL).limit(1).execute()
+            if resp.data:
+                trade_id = resp.data[0]["id"]
+                close_time = datetime.now(pytz.utc).isoformat()
+                supabase.table("trades").update({
+                    "status": "WIN" if profit > 0 else "LOSS",
+                    "profit": round(profit, 2),
+                    "close_time": close_time
+                }).eq("id", trade_id).execute()
+                log.info(f"Supabase updated: trade {trade_id} → {'WIN' if profit > 0 else 'LOSS'} ${profit:.2f}")
+        except Exception as e:
+            log.error(f"Error updating trade in Supabase: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BREAK-EVEN MANAGEMENT
@@ -775,29 +818,29 @@ def evaluate_signal() -> Optional[str]:
     Full signal evaluation pipeline.
     Returns: 'buy', 'sell', or None.
     """
-    # ── 1. Fetch M5 data ────────────────────────────────────────────────────
-    df_m5_raw = get_bars(mt5.TIMEFRAME_M5, 300)
-    if df_m5_raw is None or len(df_m5_raw) < EMA_PERIOD + 50:
-        log.debug("Not enough M5 data.")
+    # ── 1. Fetch M1 data ────────────────────────────────────────────────────
+    df_m1_raw = get_bars(mt5.TIMEFRAME_M1, 300)
+    if df_m1_raw is None or len(df_m1_raw) < EMA_PERIOD + 50:
+        log.debug("Not enough M1 data.")
         return None
 
-    df_m5 = add_indicators(df_m5_raw)
+    df_m1 = add_indicators(df_m1_raw)
 
     # Use only rows where indicators are valid
-    df = df_m5.dropna(subset=["sma50", "ema200"]).copy()
+    df = df_m1.dropna(subset=["sma50", "ema200"]).copy()
     if len(df) < TREND_LOOKBACK + 10:
         return None
 
     # ── 2. Trend ─────────────────────────────────────────────────────────────
     trend = detect_trend(df)
-    log.info(f"M5 Trend: {trend}")
+    log.info(f"M1 Trend: {trend}")
     if trend == "ranging":
         log.info("Ranging market — no trade.")
         return None
 
     # ── 3. Consolidation ─────────────────────────────────────────────────────
     if is_consolidating(df, lookback=10):
-        log.info("M5 consolidating — skipping.")
+        log.info("M1 consolidating — skipping.")
         return None
 
     # ── 4. Indicators at last closed bar ─────────────────────────────────────
@@ -877,6 +920,7 @@ def run():
     log.info("═" * 70)
 
     last_sync_time = 0
+    last_heartbeat_time = 0
 
     while True:
         try:
@@ -891,9 +935,20 @@ def run():
                 sync_all_balances()
                 last_sync_time = current_time
 
+            # Heartbeat — signale au Dashboard que le bot est vivant
+            if current_time - last_heartbeat_time > 30:
+                update_bot_heartbeat()
+                last_heartbeat_time = current_time
+
             # ── Session gate ────────────────────────────────────────────────
             if not in_trading_session():
                 log.debug("Outside trading session. Waiting...")
+                time.sleep(30)
+                continue
+
+            # ── Dashboard control gate ────────────────────────────────────
+            if not get_trading_enabled():
+                log.info("🔴 Trading PAUSÉ via Dashboard. En attente de réactivation...")
                 time.sleep(30)
                 continue
 
