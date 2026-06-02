@@ -490,10 +490,10 @@
                     <!-- ACTIVITY PANEL -->
                     <div class="glass-card rounded-2xl p-5">
                         <h3 class="font-bold mb-5 text-sm">Activité Récente</h3>
-                        <div class="space-y-4">
+                        <div class="space-y-4" id="recentActivityContainer">
                             
                             <!-- Empty State -->
-                            <div class="flex flex-col items-center justify-center py-8 text-center">
+                            <div id="recentActivityEmpty" class="flex flex-col items-center justify-center py-8 text-center">
                                 <div class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 mb-3">
                                     <i data-lucide="activity" class="w-5 h-5"></i>
                                 </div>
@@ -512,10 +512,10 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="text-slate-400 border-b border-slate-700 text-sm">
-                                    <th class="pb-3 px-4 font-medium">Pair</th>
-                                    <th class="pb-3 px-4 font-medium">Type</th>
+                                    <th class="pb-3 px-4 font-medium">Pair / Type</th>
                                     <th class="pb-3 px-4 font-medium">Entrée</th>
-                                    <th class="pb-3 px-4 font-medium">SL / TP</th>
+                                    <th class="pb-3 px-4 font-medium">TP</th>
+                                    <th class="pb-3 px-4 font-medium">SL</th>
                                     <th class="pb-3 px-4 font-medium">Profit</th>
                                     <th class="pb-3 px-4 font-medium text-right">Statut</th>
                                 </tr>
@@ -1151,10 +1151,10 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="text-slate-400 border-b border-slate-700 text-sm">
-                                    <th class="pb-3 px-4 font-medium">Pair</th>
-                                    <th class="pb-3 px-4 font-medium">Type</th>
+                                    <th class="pb-3 px-4 font-medium">Pair / Type</th>
                                     <th class="pb-3 px-4 font-medium">Entr&eacute;e</th>
-                                    <th class="pb-3 px-4 font-medium">SL / TP</th>
+                                    <th class="pb-3 px-4 font-medium">TP</th>
+                                    <th class="pb-3 px-4 font-medium">SL</th>
                                     <th class="pb-3 px-4 font-medium">Profit</th>
                                     <th class="pb-3 px-4 font-medium text-right">Statut</th>
                                 </tr>
@@ -2198,6 +2198,8 @@
 
             const liveTradesBody = document.getElementById('liveTradesBody');
             const fullTradesBody = document.getElementById('fullTradesBody');
+            const recentActivityContainer = document.getElementById('recentActivityContainer');
+            const recentActivityEmpty = document.getElementById('recentActivityEmpty');
             const dashTotalProfit = document.getElementById('dashTotalProfit');
             const dashWinRate = document.getElementById('dashWinRate');
             const dashWinRateBar = document.getElementById('dashWinRateBar');
@@ -2264,9 +2266,21 @@
 
                 if(liveTradesBody) liveTradesBody.innerHTML = '';
                 if(fullTradesBody) fullTradesBody.innerHTML = '';
+                
+                // Clear recent activity container
+                if (recentActivityContainer) {
+                    const items = recentActivityContainer.querySelectorAll('.activity-item');
+                    items.forEach(el => el.remove());
+                }
+
                 let totalProfit = 0;
                 let wonTrades = 0;
                 let completedTrades = 0;
+                let openTradesCount = 0;
+
+                // Split into open and closed trades
+                let openTrades = [];
+                let closedTradesList = [];
 
                 filteredTrades.forEach(trade => {
                     // Accumulate stats
@@ -2274,9 +2288,12 @@
                     if(trade.status === 'WON' || trade.status === 'WIN' || trade.status === 'LOST' || trade.status === 'LOSS') {
                         completedTrades++;
                         if(trade.status === 'WON' || trade.status === 'WIN') wonTrades++;
+                        closedTradesList.push(trade);
+                    } else if (trade.status === 'OPEN') {
+                        openTrades.push(trade);
                     }
 
-                    // Render Row
+                    // Render Row (for the full history tab)
                     const typeColor = trade.type === 'BUY' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10';
                     const profitColor = trade.profit > 0 ? 'text-emerald-400' : (trade.profit < 0 ? 'text-rose-400' : 'text-slate-300');
                     const statusBadge = (trade.status === 'OPEN')
@@ -2300,9 +2317,69 @@
                         <td class="py-3 px-4 font-bold ${profitColor}">$${trade.profit.toFixed(2)}</td>
                         <td class="py-3 px-4 text-right">${statusBadge}</td>
                     `;
-                    if(liveTradesBody) liveTradesBody.appendChild(tr);
                     if(fullTradesBody) fullTradesBody.appendChild(tr.cloneNode(true));
+
+                    // If OPEN, render in Live Trades table
+                    if (trade.status === 'OPEN') {
+                        openTradesCount++;
+                        if(liveTradesBody) liveTradesBody.appendChild(tr);
+                    }
                 });
+
+                // Handle empty state for Live Trades
+                if (openTradesCount === 0) {
+                    const emptyLiveState = `
+                        <tr>
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="activity" class="w-8 h-8 text-slate-600 mb-3 opacity-55"></i>
+                                    <p class="text-slate-400 font-medium">Aucune position ouverte</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    if(liveTradesBody) liveTradesBody.innerHTML = emptyLiveState;
+                }
+
+                // Render Recent Activity (closed trades)
+                if (closedTradesList.length > 0) {
+                    if (recentActivityEmpty) recentActivityEmpty.style.display = 'none';
+                    
+                    closedTradesList.slice(0, 5).forEach(trade => {
+                        const isWin = trade.status === 'WIN' || trade.status === 'WON';
+                        const iconColor = isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400';
+                        const iconType = isWin ? 'trending-up' : 'trending-down';
+                        const profitSign = trade.profit > 0 ? `+$${trade.profit.toFixed(2)}` : `-$${Math.abs(trade.profit).toFixed(2)}`;
+                        const profitClass = isWin ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold';
+                        
+                        const closeDate = new Date(trade.close_time || trade.open_time);
+                        const formattedTime = closeDate.toLocaleString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        const div = document.createElement('div');
+                        div.className = "activity-item flex items-center gap-3 p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 hover:bg-slate-800/50 transition-colors";
+                        div.innerHTML = `
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}">
+                                <i data-lucide="${iconType}" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-slate-200">${trade.symbol} ${trade.type} - TP Atteint</p>
+                                <p class="text-[10px] text-slate-500">${formattedTime}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold ${profitClass}">${profitSign}</p>
+                                <p class="text-[9px] font-bold ${isWin ? 'text-emerald-500' : 'text-rose-500'} uppercase">${trade.status}</p>
+                            </div>
+                        `;
+                        if (recentActivityContainer) recentActivityContainer.appendChild(div);
+                    });
+                } else {
+                    if (recentActivityEmpty) recentActivityEmpty.style.display = 'flex';
+                }
                 
                 // Update Dashboard Metrics
                 if(dashTotalProfit) dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
