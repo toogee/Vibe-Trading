@@ -207,6 +207,95 @@ class NewsFilter:
 news_filter = NewsFilter()
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GEMINI SENTIMENT FILTER
+# ─────────────────────────────────────────────────────────────────────────────
+import google.generativeai as genai
+import urllib.request
+import xml.etree.ElementTree as ET
+
+class SentimentFilter:
+    def __init__(self, api_key: str):
+        self.enabled = bool(api_key)
+        if self.enabled:
+            try:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                log.info("Gemini Sentiment Filter successfully configured and enabled.")
+            except Exception as e:
+                log.error(f"Error configuring Gemini Sentiment Filter: {e}")
+                self.enabled = False
+                self.model = None
+        else:
+            log.warning("No GEMINI_API_KEY found in .env — Sentiment filter is disabled.")
+            self.model = None
+
+    def get_recent_headlines(self) -> str:
+        """Fetches recent GBP/USD news headlines from public ForexLive RSS feeds."""
+        rss_urls = [
+            "https://www.forexlive.com/feed/news",
+            "https://www.forexlive.com/feed/TechnicalAnalysis"
+        ]
+        headlines = []
+        for url in rss_urls:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=8) as response:
+                    xml_data = response.read()
+                    root = ET.fromstring(xml_data)
+                    for item in root.findall(".//item")[:8]: # Top 8 articles from each feed
+                        title = item.find("title")
+                        desc = item.find("description")
+                        txt = ""
+                        if title is not None and title.text:
+                            txt += title.text.strip()
+                        if desc is not None and desc.text:
+                            desc_clean = desc.text.split('<')[0].strip()
+                            if desc_clean:
+                                txt += f" - {desc_clean[:120]}"
+                        if txt:
+                            headlines.append(txt)
+            except Exception as e:
+                log.warning(f"Failed to fetch news from {url} for sentiment filter: {e}")
+        
+        if not headlines:
+            return "No recent news headlines available."
+        return "\n".join(headlines[:15])
+
+    def get_market_bias(self) -> float:
+        """
+        Analyzes news headlines using Gemini and returns a sentiment score between -1 (Bearish) and +1 (Bullish).
+        Returns 0.0 (Neutral) if disabled or if an error occurs.
+        """
+        if not self.enabled or not self.model:
+            return 0.0
+            
+        headlines = self.get_recent_headlines()
+        if "No recent news headlines" in headlines:
+            log.info("No fresh news headlines available. Sentiment score neutral (0.0)")
+            return 0.0
+
+        prompt = f"""
+        Analyze the current market sentiment for the GBP/USD currency pair based on these recent news headlines:
+        ---
+        {headlines}
+        ---
+        Return only a single decimal number between -1.0 (extremely Bearish / Sell bias) and +1.0 (extremely Bullish / Buy bias).
+        Do not include any explanation, markdown, or other text. Return ONLY the number.
+        """
+        try:
+            response = self.model.generate_content(prompt)
+            score_str = response.text.strip()
+            score = float(score_str)
+            log.info(f"Gemini Sentiment Analysis: Score = {score:.2f} based on {len(headlines.splitlines())} headlines.")
+            return score
+        except Exception as e:
+            log.warning(f"Failed to generate sentiment score from Gemini: {e}. Defaulting to neutral (0.0)")
+            return 0.0
+
+gemini_key = os.getenv("GEMINI_API_KEY", "")
+sentiment_filter = SentimentFilter(api_key=gemini_key)
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MT5 HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -891,6 +980,23 @@ def evaluate_signal() -> Optional[str]:
             continue
 
         log.info(f"🎯 HIGH-PROBABILITY SETUP: {direction.upper()} | near_zone={near_zone} | retest_both_mas={retest_both_mas}")
+        
+        # 6f. IA Sentiment Filter validation (only called when technical setup is detected)
+        if sentiment_filter.enabled:
+            log.info("Analyzing market sentiment with Gemini...")
+            sentiment_score = sentiment_filter.get_market_bias()
+            
+            if direction == "buy" and sentiment_score < -0.2:
+                log.warning(f"🚫 Technical BUY setup ignored: Bearish market sentiment (Score: {sentiment_score})")
+                return None
+            if direction == "sell" and sentiment_score > 0.2:
+                log.warning(f"🚫 Technical SELL setup ignored: Bullish market sentiment (Score: {sentiment_score})")
+                return None
+                
+            log.info(f"✅ Trade validated by Sentiment Filter! Score = {sentiment_score}")
+        else:
+            log.debug("Sentiment filter is disabled (No API key). Skipping sentiment validation.")
+
         return direction
 
     return None
