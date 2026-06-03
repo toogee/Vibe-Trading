@@ -296,6 +296,37 @@ gemini_key = os.getenv("GEMINI_API_KEY", "")
 sentiment_filter = SentimentFilter(api_key=gemini_key)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TELEGRAM NOTIFIER
+# ─────────────────────────────────────────────────────────────────────────────
+import requests
+
+class TelegramNotifier:
+    def __init__(self, token: str, chat_id: str):
+        self.enabled = bool(token and chat_id)
+        if self.enabled:
+            self.token = token
+            self.chat_id = chat_id
+            self.base_url = f"https://api.telegram.org/bot{token}/sendMessage"
+            log.info("Telegram Notifier successfully configured and enabled.")
+        else:
+            log.warning("Telegram token or chat_id is missing in .env. Notifications are disabled.")
+
+    def send_message(self, message: str):
+        if not self.enabled:
+            return
+        try:
+            payload = {"chat_id": self.chat_id, "text": message, "parse_mode": "Markdown"}
+            resp = requests.post(self.base_url, data=payload, timeout=5)
+            if resp.status_code != 200:
+                log.error(f"Telegram API error: {resp.status_code} - {resp.text}")
+        except Exception as e:
+            log.error(f"Erreur envoi Telegram: {e}")
+
+telegram_token = os.getenv("TELEGRAM_TOKEN", "")
+telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+telegram_notifier = TelegramNotifier(token=telegram_token, chat_id=telegram_chat_id)
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MT5 HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -988,9 +1019,11 @@ def evaluate_signal() -> Optional[str]:
             
             if direction == "buy" and sentiment_score < -0.2:
                 log.warning(f"🚫 Technical BUY setup ignored: Bearish market sentiment (Score: {sentiment_score})")
+                telegram_notifier.send_message(f"⚠️ *Trade BUY annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Baissier)")
                 return None
             if direction == "sell" and sentiment_score > 0.2:
                 log.warning(f"🚫 Technical SELL setup ignored: Bullish market sentiment (Score: {sentiment_score})")
+                telegram_notifier.send_message(f"⚠️ *Trade SELL annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Haussier)")
                 return None
                 
             log.info(f"✅ Trade validated by Sentiment Filter! Score = {sentiment_score}")
@@ -1010,13 +1043,18 @@ def run():
     log.info("  GBPUSD SCALPING BOT — Starting up")
     log.info("═" * 70)
 
+    # Welcome message on Telegram
+    telegram_notifier.send_message("🟢 *Vibe Trading Bot* démarré avec succès ! Surveillance active sur GBP/USD.")
+
     if not mt5_connect():
         log.error("Failed to connect to MT5. Exiting.")
+        telegram_notifier.send_message("❌ *ERREUR CRITIQUE :* Impossible de se connecter au terminal MetaTrader 5 !")
         return
 
     # Ensure symbol is available
     if not mt5.symbol_select(SYMBOL, True):
         log.error(f"Cannot select symbol {SYMBOL}.")
+        telegram_notifier.send_message(f"❌ *ERREUR CRITIQUE :* Impossible de sélectionner le symbole {SYMBOL} sur MT5 !")
         mt5.shutdown()
         return
 
@@ -1027,6 +1065,8 @@ def run():
 
     last_sync_time = 0
     last_heartbeat_time = 0
+    last_telegram_heartbeat = time.time()
+    last_trade_time = time.time()
 
     while True:
         try:
@@ -1045,6 +1085,12 @@ def run():
             if current_time - last_heartbeat_time > 30:
                 update_bot_heartbeat()
                 last_heartbeat_time = current_time
+
+            # Active surveillance: Send "Bot Active" every hour if no trades occurred for 4 hours
+            if current_time - last_trade_time >= 14400:
+                if current_time - last_telegram_heartbeat > 3600:
+                    telegram_notifier.send_message("ℹ️ *Vibe Trading Bot* : Actif et opérationnel. Aucune transaction détectée sur les 4 dernières heures.")
+                    last_telegram_heartbeat = current_time
 
             # ── Session gate ────────────────────────────────────────────────
             if not in_trading_session():
@@ -1079,15 +1125,21 @@ def run():
             signal = evaluate_signal()
 
             if signal in ("buy", "sell"):
-                place_order_for_all_users(signal)
+                if place_order_for_all_users(signal):
+                    telegram_notifier.send_message(f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*")
+                    last_trade_time = current_time
+                else:
+                    telegram_notifier.send_message(f"❌ *Erreur de transaction :* Signal {signal.upper()} détecté mais l'ordre n'a pas pu être placé sur les comptes.")
 
             time.sleep(POLL_INTERVAL)
 
         except KeyboardInterrupt:
             log.info("Bot stopped by user.")
+            telegram_notifier.send_message("🔴 *Vibe Trading Bot* arrêté manuellement par l'utilisateur.")
             break
         except Exception as e:
             log.error(f"Unexpected error: {e}", exc_info=True)
+            telegram_notifier.send_message(f"⚠️ *Alerte Système :* Une erreur inattendue est survenue : `{str(e)[:150]}`")
             time.sleep(30)
 
     mt5.shutdown()

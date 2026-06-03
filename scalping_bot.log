@@ -4548,3 +4548,381 @@
 2026-06-03 08:08:17,943 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
 2026-06-03 08:08:17,954 [INFO] M1 Trend: ranging
 2026-06-03 08:08:17,954 [INFO] Ranging market — no trade.
+2026-06-03 08:08:28,142 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:08:28,221 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:08:28,305 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:08:28,381 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:08:28,390 [INFO] M1 Trend: ranging
+2026-06-03 08:08:28,391 [INFO] Ranging market — no trade.
+2026-06-03 08:08:38,560 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:08:38,633 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:08:38,710 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:08:38,719 [INFO] M1 Trend: ranging
+2026-06-03 08:08:38,720 [INFO] Ranging market — no trade.
+2026-06-03 08:08:48,901 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:08:49,003 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:08:49,095 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:08:49,104 [INFO] M1 Trend: ranging
+2026-06-03 08:08:49,105 [INFO] Ranging market — no trade.
+2026-06-03 08:08:59,437 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:08:59,588 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:08:59,731 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:08:59,846 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:08:59,859 [INFO] M1 Trend: ranging
+2026-06-03 08:08:59,863 [INFO] Ranging market — no trade.
+2026-06-03 08:09:10,025 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:09:10,102 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:09:10,179 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:09:10,179 [INFO] M1 Trend: ranging
+2026-06-03 08:09:10,179 [INFO] Ranging market — no trade.
+2026-06-03 08:09:20,380 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:09:20,476 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:09:20,576 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:09:20,587 [INFO] M1 Trend: ranging
+2026-06-03 08:09:20,591 [INFO] Ranging market — no trade.
+2026-06-03 08:09:30,767 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:09:30,845 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:09:30,932 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:09:31,016 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:09:31,025 [INFO] M1 Trend: ranging
+2026-06-03 08:09:31,025 [INFO] Ranging market — no trade.
+2026-06-03 08:09:41,207 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:09:41,297 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:09:41,382 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:09:41,382 [INFO] M1 Trend: ranging
+2026-06-03 08:09:41,382 [INFO] Ranging market — no trade.
+2026-06-03 08:09:51,566 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:09:51,645 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:09:51,725 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:09:51,735 [INFO] M1 Trend: ranging
+2026-06-03 08:09:51,735 [INFO] Ranging market — no trade.
+2026-06-03 08:10:01,903 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:01,994 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:02,073 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:10:02,156 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:02,173 [INFO] M1 Trend: ranging
+2026-06-03 08:10:02,173 [INFO] Ranging market — no trade.
+2026-06-03 08:10:12,358 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:12,433 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:12,515 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:12,523 [INFO] M1 Trend: ranging
+2026-06-03 08:10:12,523 [INFO] Ranging market — no trade.
+2026-06-03 08:10:22,770 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:22,864 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:22,952 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:22,963 [INFO] M1 Trend: ranging
+2026-06-03 08:10:22,964 [INFO] Ranging market — no trade.
+2026-06-03 08:10:33,173 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:33,253 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:33,379 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:10:33,453 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:33,465 [INFO] M1 Trend: ranging
+2026-06-03 08:10:33,465 [INFO] Ranging market — no trade.
+2026-06-03 08:10:43,652 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:43,729 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:43,813 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:43,813 [INFO] Syncing balances for all active users...
+2026-06-03 08:10:43,887 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:43,973 [INFO] HTTP Request: PATCH https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?id=eq.34ea1d43-eec6-47ab-a6dc-263d00c8995a "HTTP/2 200 OK"
+2026-06-03 08:10:44,057 [INFO] HTTP Request: PATCH https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?id=eq.34ea1d43-eec6-47ab-a6dc-263d00c8995a "HTTP/2 200 OK"
+2026-06-03 08:10:44,123 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:44,139 [INFO] M1 Trend: ranging
+2026-06-03 08:10:44,139 [INFO] Ranging market — no trade.
+2026-06-03 08:10:54,303 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:10:54,383 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:10:54,452 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:10:54,462 [INFO] M1 Trend: ranging
+2026-06-03 08:10:54,462 [INFO] Ranging market — no trade.
+2026-06-03 08:11:04,732 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:04,798 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:04,873 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:11:04,956 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:04,965 [INFO] M1 Trend: ranging
+2026-06-03 08:11:04,965 [INFO] Ranging market — no trade.
+2026-06-03 08:11:15,142 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:15,223 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:15,302 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:15,302 [INFO] M1 Trend: ranging
+2026-06-03 08:11:15,302 [INFO] Ranging market — no trade.
+2026-06-03 08:11:25,473 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:25,553 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:25,636 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:25,645 [INFO] M1 Trend: ranging
+2026-06-03 08:11:25,645 [INFO] Ranging market — no trade.
+2026-06-03 08:11:35,807 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:35,900 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:35,983 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:11:36,063 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:36,073 [INFO] M1 Trend: ranging
+2026-06-03 08:11:36,073 [INFO] Ranging market — no trade.
+2026-06-03 08:11:46,257 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:46,331 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:46,404 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:46,416 [INFO] M1 Trend: ranging
+2026-06-03 08:11:46,417 [INFO] Ranging market — no trade.
+2026-06-03 08:11:56,576 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:11:56,654 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:11:56,733 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:11:56,733 [INFO] M1 Trend: ranging
+2026-06-03 08:11:56,733 [INFO] Ranging market — no trade.
+2026-06-03 08:12:06,925 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:07,004 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:07,085 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:12:07,175 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:07,180 [INFO] M1 Trend: ranging
+2026-06-03 08:12:07,180 [INFO] Ranging market — no trade.
+2026-06-03 08:12:17,357 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:17,454 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:17,531 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:17,531 [INFO] M1 Trend: ranging
+2026-06-03 08:12:17,531 [INFO] Ranging market — no trade.
+2026-06-03 08:12:27,688 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:27,774 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:27,860 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:27,870 [INFO] M1 Trend: ranging
+2026-06-03 08:12:27,870 [INFO] Ranging market — no trade.
+2026-06-03 08:12:38,054 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:38,139 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:38,240 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:12:38,323 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:38,323 [INFO] M1 Trend: ranging
+2026-06-03 08:12:38,323 [INFO] Ranging market — no trade.
+2026-06-03 08:12:48,525 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:48,602 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:48,689 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:48,689 [INFO] M1 Trend: ranging
+2026-06-03 08:12:48,689 [INFO] Ranging market — no trade.
+2026-06-03 08:12:58,873 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:12:58,968 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:12:59,064 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:12:59,075 [INFO] M1 Trend: ranging
+2026-06-03 08:12:59,075 [INFO] Ranging market — no trade.
+2026-06-03 08:13:09,273 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:13:09,373 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:13:09,474 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:13:09,568 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:13:09,583 [INFO] M1 Trend: ranging
+2026-06-03 08:13:09,583 [INFO] Ranging market — no trade.
+2026-06-03 08:13:19,764 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:13:19,842 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:13:19,923 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:13:19,925 [INFO] M1 Trend: ranging
+2026-06-03 08:13:19,925 [INFO] Ranging market — no trade.
+2026-06-03 08:13:30,116 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:13:30,191 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:13:30,273 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:13:30,288 [INFO] M1 Trend: ranging
+2026-06-03 08:13:30,288 [INFO] Ranging market — no trade.
+2026-06-03 08:13:40,473 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:13:40,556 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:13:40,646 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:13:40,723 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:13:40,735 [INFO] M1 Trend: ranging
+2026-06-03 08:13:40,735 [INFO] Ranging market — no trade.
+2026-06-03 08:13:50,902 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:13:51,004 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:13:51,083 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:13:51,088 [INFO] M1 Trend: ranging
+2026-06-03 08:13:51,088 [INFO] Ranging market — no trade.
+2026-06-03 08:14:01,303 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:01,423 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:01,484 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:01,502 [INFO] M1 Trend: ranging
+2026-06-03 08:14:01,502 [INFO] Ranging market — no trade.
+2026-06-03 08:14:11,717 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:11,810 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:11,922 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:14:12,019 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:12,025 [INFO] M1 Trend: ranging
+2026-06-03 08:14:12,025 [INFO] Ranging market — no trade.
+2026-06-03 08:14:22,233 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:22,339 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:22,433 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:22,442 [INFO] M1 Trend: ranging
+2026-06-03 08:14:22,442 [INFO] Ranging market — no trade.
+2026-06-03 08:14:32,662 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:32,764 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:32,856 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:32,858 [INFO] M1 Trend: ranging
+2026-06-03 08:14:32,858 [INFO] Ranging market — no trade.
+2026-06-03 08:14:43,063 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:43,176 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:43,264 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:14:43,345 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:43,353 [INFO] M1 Trend: ranging
+2026-06-03 08:14:43,353 [INFO] Ranging market — no trade.
+2026-06-03 08:14:53,534 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:14:53,613 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:14:53,697 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:14:53,707 [INFO] M1 Trend: ranging
+2026-06-03 08:14:53,707 [INFO] Ranging market — no trade.
+2026-06-03 08:15:03,861 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:03,941 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:04,017 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:04,027 [INFO] M1 Trend: ranging
+2026-06-03 08:15:04,027 [INFO] Ranging market — no trade.
+2026-06-03 08:15:14,201 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:14,280 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:14,364 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:15:14,447 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:14,453 [INFO] M1 Trend: ranging
+2026-06-03 08:15:14,453 [INFO] Ranging market — no trade.
+2026-06-03 08:15:24,622 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:24,706 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:24,780 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:24,796 [INFO] M1 Trend: ranging
+2026-06-03 08:15:24,797 [INFO] Ranging market — no trade.
+2026-06-03 08:15:34,953 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:35,031 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:35,113 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:35,123 [INFO] M1 Trend: ranging
+2026-06-03 08:15:35,123 [INFO] Ranging market — no trade.
+2026-06-03 08:15:45,320 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:45,402 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:45,489 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:45,490 [INFO] Syncing balances for all active users...
+2026-06-03 08:15:45,573 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:45,673 [INFO] HTTP Request: PATCH https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?id=eq.34ea1d43-eec6-47ab-a6dc-263d00c8995a "HTTP/2 200 OK"
+2026-06-03 08:15:45,756 [INFO] HTTP Request: PATCH https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?id=eq.34ea1d43-eec6-47ab-a6dc-263d00c8995a "HTTP/2 200 OK"
+2026-06-03 08:15:45,838 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:15:45,914 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:45,923 [INFO] M1 Trend: ranging
+2026-06-03 08:15:45,923 [INFO] Ranging market — no trade.
+2026-06-03 08:15:56,097 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:15:56,173 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:15:56,250 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:15:56,259 [INFO] M1 Trend: ranging
+2026-06-03 08:15:56,259 [INFO] Ranging market — no trade.
+2026-06-03 08:16:06,478 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:06,547 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:06,627 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:06,637 [INFO] M1 Trend: ranging
+2026-06-03 08:16:06,637 [INFO] Ranging market — no trade.
+2026-06-03 08:16:16,837 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:16,903 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:16,980 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:16:17,049 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:17,059 [INFO] M1 Trend: ranging
+2026-06-03 08:16:17,060 [INFO] Ranging market — no trade.
+2026-06-03 08:16:27,217 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:27,281 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:27,371 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:27,379 [INFO] M1 Trend: ranging
+2026-06-03 08:16:27,379 [INFO] Ranging market — no trade.
+2026-06-03 08:16:37,548 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:37,623 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:37,680 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:37,703 [INFO] M1 Trend: ranging
+2026-06-03 08:16:37,703 [INFO] Ranging market — no trade.
+2026-06-03 08:16:47,875 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:47,960 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:48,039 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:16:48,126 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:48,138 [INFO] M1 Trend: ranging
+2026-06-03 08:16:48,138 [INFO] Ranging market — no trade.
+2026-06-03 08:16:58,313 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:16:58,412 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:16:58,492 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:16:58,503 [INFO] M1 Trend: ranging
+2026-06-03 08:16:58,503 [INFO] Ranging market — no trade.
+2026-06-03 08:17:08,684 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:17:08,782 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:17:08,887 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:17:08,919 [INFO] M1 Trend: ranging
+2026-06-03 08:17:08,948 [INFO] Ranging market — no trade.
+2026-06-03 08:17:19,123 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:17:19,204 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:17:19,310 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:17:19,407 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:17:19,425 [INFO] M1 Trend: ranging
+2026-06-03 08:17:19,452 [INFO] Ranging market — no trade.
+2026-06-03 08:17:29,590 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:17:29,673 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:17:29,748 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:17:29,753 [INFO] M1 Trend: ranging
+2026-06-03 08:17:29,753 [INFO] Ranging market — no trade.
+2026-06-03 08:17:39,930 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:17:40,009 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:17:40,073 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:17:40,083 [INFO] M1 Trend: ranging
+2026-06-03 08:17:40,083 [INFO] Ranging market — no trade.
+2026-06-03 08:17:50,268 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:17:50,339 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:17:50,435 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:17:50,514 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:17:50,530 [INFO] M1 Trend: ranging
+2026-06-03 08:17:50,530 [INFO] Ranging market — no trade.
+2026-06-03 08:18:00,685 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:00,764 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:00,836 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:00,843 [INFO] M1 Trend: ranging
+2026-06-03 08:18:00,843 [INFO] Ranging market — no trade.
+2026-06-03 08:18:11,034 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:11,121 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:11,207 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:11,214 [INFO] M1 Trend: ranging
+2026-06-03 08:18:11,215 [INFO] Ranging market — no trade.
+2026-06-03 08:18:21,402 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:21,489 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:21,568 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:18:21,650 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:21,658 [INFO] M1 Trend: ranging
+2026-06-03 08:18:21,658 [INFO] Ranging market — no trade.
+2026-06-03 08:18:31,883 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:31,977 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:32,073 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:32,089 [INFO] M1 Trend: ranging
+2026-06-03 08:18:32,089 [INFO] Ranging market — no trade.
+2026-06-03 08:18:42,295 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:42,397 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:42,474 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:42,474 [INFO] M1 Trend: ranging
+2026-06-03 08:18:42,489 [INFO] Ranging market — no trade.
+2026-06-03 08:18:52,666 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:18:52,753 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:18:52,826 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:18:52,889 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:18:52,905 [INFO] M1 Trend: ranging
+2026-06-03 08:18:52,905 [INFO] Ranging market — no trade.
+2026-06-03 08:19:03,119 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:03,316 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:03,390 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:03,402 [INFO] M1 Trend: ranging
+2026-06-03 08:19:03,402 [INFO] Ranging market — no trade.
+2026-06-03 08:19:13,578 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:13,681 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:13,753 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:13,758 [INFO] M1 Trend: ranging
+2026-06-03 08:19:13,758 [INFO] Ranging market — no trade.
+2026-06-03 08:19:23,923 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:23,989 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:24,075 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:19:24,147 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:24,153 [INFO] M1 Trend: ranging
+2026-06-03 08:19:24,153 [INFO] Ranging market — no trade.
+2026-06-03 08:19:34,349 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:34,435 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:34,514 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:34,524 [INFO] M1 Trend: ranging
+2026-06-03 08:19:34,524 [INFO] Ranging market — no trade.
+2026-06-03 08:19:44,693 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:44,773 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:44,852 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:44,853 [INFO] M1 Trend: ranging
+2026-06-03 08:19:44,853 [INFO] Ranging market — no trade.
+2026-06-03 08:19:55,032 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:19:55,119 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:19:55,202 [INFO] HTTP Request: POST https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control "HTTP/2 200 OK"
+2026-06-03 08:19:55,280 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:19:55,281 [INFO] M1 Trend: ranging
+2026-06-03 08:19:55,281 [INFO] Ranging market — no trade.
+2026-06-03 08:20:05,459 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:20:05,538 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:20:05,603 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:20:05,623 [INFO] M1 Trend: ranging
+2026-06-03 08:20:05,623 [INFO] Ranging market — no trade.
+2026-06-03 08:20:15,783 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/subscriptions?select=user_id&status=eq.ACTIVE "HTTP/2 200 OK"
+2026-06-03 08:20:15,873 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/mt5_accounts?select=%2A&user_id=eq.1eed9f92-2920-4ea4-864a-b0d959b2042b "HTTP/2 200 OK"
+2026-06-03 08:20:15,932 [INFO] HTTP Request: GET https://mzybdzidwyoepwnzjrfy.supabase.co/rest/v1/bot_control?select=trading_enabled&id=eq.1 "HTTP/2 200 OK"
+2026-06-03 08:20:15,954 [INFO] M1 Trend: ranging
+2026-06-03 08:20:15,954 [INFO] Ranging market — no trade.
