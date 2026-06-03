@@ -1142,7 +1142,7 @@ def run():
         mt5.shutdown()
         return
 
-    log.info(f"Symbol: {SYMBOL} | Risk: {RISK_PERCENT}% | TP: {TAKE_PROFIT_PIP}p | SL: {STOP_LOSS_PIP}p")
+    log.info(f"Symbol: {SYMBOL} | Risk: {RISK_PERCENT}% | ATR SL Multiplier: {ATR_SL_MULTIPLIER}x | Risk/Reward: {RISK_REWARD_RATIO}x")
     log.info(f"Session: {SESSION_START_HOUR:02d}:00–{SESSION_END_HOUR:02d}:00 ({TIMEZONE})")
     log.info("Polling every 10 seconds...")
     log.info("═" * 70)
