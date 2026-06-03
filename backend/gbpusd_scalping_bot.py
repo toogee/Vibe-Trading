@@ -42,8 +42,8 @@ from security import decrypt_password
 SYMBOL          = "GBPUSD"
 MAGIC_NUMBER    = 20240601          # Unique ID for this bot's trades
 RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
-TAKE_PROFIT_PIP = 11                # TP in pips
-STOP_LOSS_PIP   = 5                 # SL in pips
+ATR_SL_MULTIPLIER = 1.5             # SL is 1.5 * ATR
+RISK_REWARD_RATIO = 2.2             # TP is 2.2 * SL (risk/reward ratio)
 PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
 MAX_DAILY_TRADES= 3
 MAX_DAILY_LOSSES= 2
@@ -60,8 +60,7 @@ MAX_SPREAD_PIPS    = 1.5
 NEWS_BUFFER_MINUTES = 30
 
 # Indicators
-SMA_PERIOD = 50
-EMA_PERIOD = 200
+ATR_PERIOD = 14
 
 # Swing detection lookback (bars each side)
 SWING_LOOKBACK = 5
@@ -359,10 +358,81 @@ def candle_range(row) -> float:
 # INDICATORS
 # ─────────────────────────────────────────────────────────────────────────────
 
+def calculate_vwap(df: pd.DataFrame) -> pd.Series:
+    """
+    Calculate daily resetting VWAP.
+    Typical Price = (High + Low + Close) / 3
+    VWAP = sum(Typical Price * Volume) / sum(Volume)
+    Resets when the calendar day changes.
+    """
+    df = df.copy()
+    # Typical price
+    df['tp'] = (df['high'] + df['low'] + df['close']) / 3.0
+    df['tp_vol'] = df['tp'] * df['tick_volume']
+    
+    # Convert 'time' to datetime format if not already done
+    df['time_dt'] = pd.to_datetime(df['time'])
+    df['date'] = df['time_dt'].dt.date
+    
+    cum_vol = df.groupby('date')['tick_volume'].cumsum()
+    cum_tp_vol = df.groupby('date')['tp_vol'].cumsum()
+    
+    # Avoid division by zero
+    vwap = cum_tp_vol / cum_vol.replace(0, 1)
+    return vwap
+
+def calculate_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """
+    Calculate Average True Range (ATR) using Wilder's EMA smoothing.
+    """
+    df = df.copy()
+    high = df['high']
+    low = df['low']
+    close_prev = df['close'].shift(1)
+    
+    tr1 = high - low
+    tr2 = (high - close_prev).abs()
+    tr3 = (low - close_prev).abs()
+    
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr = tr.ewm(alpha=1.0/period, adjust=False).mean()
+    return atr
+
+def calculate_stoch_rsi(df: pd.DataFrame, period: int = 14, k_period: int = 3, d_period: int = 3) -> Tuple[pd.Series, pd.Series]:
+    """
+    Calculate Stochastic RSI (%K and %D lines).
+    """
+    df = df.copy()
+    delta = df['close'].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    
+    # Wilder's EMA for RSI
+    avg_gain = gain.ewm(alpha=1.0/period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1.0/period, adjust=False).mean()
+    
+    rs = avg_gain / avg_loss.replace(0, 1e-9)
+    rsi = 100 - (100 / (1 + rs))
+    
+    # Stochastic of RSI
+    rsi_min = rsi.rolling(window=period).min()
+    rsi_max = rsi.rolling(window=period).max()
+    
+    stoch_rsi = (rsi - rsi_min) / (rsi_max - rsi_min).replace(0, 1e-9)
+    
+    # Smooth %K and %D
+    stoch_rsi_k = stoch_rsi.rolling(window=k_period).mean() * 100
+    stoch_rsi_d = stoch_rsi_k.rolling(window=d_period).mean()
+    
+    return stoch_rsi_k, stoch_rsi_d
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    df["sma50"]  = df["close"].rolling(SMA_PERIOD).mean()
-    df["ema200"] = df["close"].ewm(span=EMA_PERIOD, adjust=False).mean()
+    df["vwap"] = calculate_vwap(df)
+    df["atr"] = calculate_atr(df, period=14)
+    k, d = calculate_stoch_rsi(df, period=14)
+    df["stoch_k"] = k
+    df["stoch_d"] = d
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -644,7 +714,7 @@ def get_open_position(magic: int) -> Optional[object]:
                 return pos
     return None
 
-def place_order_for_all_users(direction: str) -> bool:
+def place_order_for_all_users(direction: str, atr: float) -> bool:
     """
     Loop through all active users in Supabase, switch MT5 account, and place order.
     Returns True if at least one trade was placed.
@@ -656,6 +726,11 @@ def place_order_for_all_users(direction: str) -> bool:
 
     success_count = 0
     original_account = mt5.account_info()
+
+    # Calculate standard SL/TP distances based on ATR
+    sl_distance = atr * ATR_SL_MULTIPLIER
+    tp_distance = sl_distance * RISK_REWARD_RATIO
+    sl_pips = sl_distance / PIP_VALUE
 
     for user_id in active_users:
         mt5_acc = get_user_mt5_account(user_id)
@@ -689,41 +764,46 @@ def place_order_for_all_users(direction: str) -> bool:
                 log.warning(f"Spread {spread_pips:.1f} pips exceeds limit {MAX_SPREAD_PIPS}. Skipping trade for {login}.")
                 continue
             
-            # Calculate dynamic lot size based on balance
+            # Calculate dynamic lot size based on balance and ATR Stop-Loss
             account_info = mt5.account_info()
             if account_info is None:
                 continue
                 
             balance = account_info.balance
-            dynamic_lot = calculate_lot_size(balance, RISK_PERCENT, STOP_LOSS_PIP, sym_info)
-
+            
+            # Set entry price and targets
             if direction == "buy":
                 price    = tick.ask
-                sl       = price - STOP_LOSS_PIP   * PIP_VALUE
-                tp       = price + TAKE_PROFIT_PIP * PIP_VALUE
+                sl       = price - sl_distance
+                tp       = price + tp_distance
                 order_type = mt5.ORDER_TYPE_BUY
             else:
                 price    = tick.bid
-                sl       = price + STOP_LOSS_PIP   * PIP_VALUE
-                tp       = price - TAKE_PROFIT_PIP * PIP_VALUE
+                sl       = price + sl_distance
+                tp       = price - tp_distance
                 order_type = mt5.ORDER_TYPE_SELL
 
             # ── Vérifier stop level minimum du broker ───────────────────────
             sym_info_check = mt5.symbol_info(SYMBOL)
+            current_sl_pips = sl_pips
+            current_sl_distance = sl_distance
+            current_tp_distance = tp_distance
+            
             if sym_info_check and sym_info_check.trade_stops_level > 0:
                 min_stop_pips = sym_info_check.trade_stops_level / 10.0
-                if STOP_LOSS_PIP < min_stop_pips:
-                    log.warning(f"⚠️  SL {STOP_LOSS_PIP}p < stop_level min {min_stop_pips}p — SL ajusté!")
+                if current_sl_pips < min_stop_pips:
+                    log.warning(f"⚠️  SL {current_sl_pips:.1f}p < stop_level min {min_stop_pips}p — SL ajusté!")
+                    current_sl_pips = min_stop_pips + 2
+                    current_sl_distance = current_sl_pips * PIP_VALUE
+                    current_tp_distance = current_sl_distance * RISK_REWARD_RATIO
                     if direction == "buy":
-                        sl = price - (min_stop_pips + 2) * PIP_VALUE
+                         sl = price - current_sl_distance
+                         tp = price + current_tp_distance
                     else:
-                        sl = price + (min_stop_pips + 2) * PIP_VALUE
-                if TAKE_PROFIT_PIP < min_stop_pips:
-                    log.warning(f"⚠️  TP {TAKE_PROFIT_PIP}p < stop_level min {min_stop_pips}p — TP ajusté!")
-                    if direction == "buy":
-                        tp = price + (min_stop_pips + 2) * PIP_VALUE
-                    else:
-                        tp = price - (min_stop_pips + 2) * PIP_VALUE
+                         sl = price + current_sl_distance
+                         tp = price - current_tp_distance
+
+            dynamic_lot = calculate_lot_size(balance, RISK_PERCENT, current_sl_pips, sym_info)
 
             # Auto-détecter le filling mode supporté par le broker
             filling_mode = mt5.ORDER_FILLING_IOC  # défaut
@@ -933,86 +1013,90 @@ def sync_all_balances():
 # CORE SIGNAL LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
-def evaluate_signal() -> Optional[str]:
+def evaluate_signal() -> Tuple[Optional[str], float]:
     """
-    Full signal evaluation pipeline.
-    Returns: 'buy', 'sell', or None.
+    Full signal evaluation pipeline using institutional indicators:
+    - Biais directionnel via VWAP
+    - Déclencheur (trigger) via croisement StochRSI dans les zones Supply/Demand
+    - IA Sentiment validation via Gemini
+    Returns: (direction, atr_value) -> ('buy'/'sell'/None, float)
     """
     # ── 1. Fetch M1 data ────────────────────────────────────────────────────
     df_m1_raw = get_bars(mt5.TIMEFRAME_M1, 300)
-    if df_m1_raw is None or len(df_m1_raw) < EMA_PERIOD + 50:
+    if df_m1_raw is None or len(df_m1_raw) < 150:
         log.debug("Not enough M1 data.")
-        return None
+        return None, 0.0
 
     df_m1 = add_indicators(df_m1_raw)
 
     # Use only rows where indicators are valid
-    df = df_m1.dropna(subset=["sma50", "ema200"]).copy()
-    if len(df) < TREND_LOOKBACK + 10:
-        return None
+    df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d"]).copy()
+    if len(df) < 20:
+        return None, 0.0
 
-    # ── 2. Trend ─────────────────────────────────────────────────────────────
-    trend = detect_trend(df)
-    log.info(f"M1 Trend: {trend}")
-    if trend == "ranging":
-        log.info("Ranging market — no trade.")
-        return None
-
-    # ── 3. Consolidation ─────────────────────────────────────────────────────
+    # ── 2. Consolidation ─────────────────────────────────────────────────────
     if is_consolidating(df, lookback=10):
         log.info("M1 consolidating — skipping.")
-        return None
+        return None, 0.0
 
-    # ── 4. Indicators at last closed bar ─────────────────────────────────────
+    # ── 3. Indicators at last closed bar ─────────────────────────────────────
     last_closed = df.iloc[-2]  # -1 is still forming
     prev_closed = df.iloc[-3]
-    sma50  = last_closed["sma50"]
-    ema200 = last_closed["ema200"]
     price  = last_closed["close"]
+    vwap   = last_closed["vwap"]
+    atr    = last_closed["atr"]
+
+    # ── 4. Determine VWAP Bias ───────────────────────────────────────────────
+    if price > vwap:
+        bias = "buy"
+    elif price < vwap:
+        bias = "sell"
+    else:
+        log.debug(f"Price on VWAP. Neutral bias.")
+        return None, 0.0
 
     # ── 5. Supply / Demand zones ─────────────────────────────────────────────
     demand_zones, supply_zones = detect_zones(df.iloc[:-1])  # exclude current bar
 
     # ── 6. Direction-specific checks ─────────────────────────────────────────
-    for direction in (["buy"] if trend == "bullish" else ["sell"]):
+    direction = None
 
-        zones = demand_zones if direction == "buy" else supply_zones
+    if bias == "buy":
+        in_demand = price_in_zone(price, demand_zones)
+        stoch_k = last_closed["stoch_k"]
+        stoch_d = last_closed["stoch_d"]
+        prev_k = prev_closed["stoch_k"]
+        prev_d = prev_closed["stoch_d"]
 
-        # 6a. Price must be near a key level (zone, or BOTH SMA50 and EMA200 simultaneously)
-        near_zone    = price_in_zone(price, zones)
-        near_sma50   = price_near_level(price, sma50, 4)
-        near_ema200  = price_near_level(price, ema200, 4)
-
-        # The user specifically requested: "un retest sur les MMA50 en meme temps sur EMA200"
-        retest_both_mas = near_sma50 and near_ema200
-
-        if not (near_zone or retest_both_mas):
-            log.debug(f"[{direction.upper()}] Price not near zone or BOTH MAs.")
-            continue
-
-        # 6b. Break & Retest
-        if not detect_break_and_retest(df, direction, zones, sma50, ema200):
-            log.debug(f"[{direction.upper()}] No B&R setup detected.")
-            continue
-
-        # 6c. Rejection candle on last_closed bar
-        if not is_rejection_candle(last_closed, direction):
-            log.debug(f"[{direction.upper()}] No rejection candle.")
-            continue
-
-        # 6d. Engulfing candle — MUST be fully closed (use last_closed over prev_closed)
-        if not is_engulfing(prev_closed, last_closed, direction):
-            log.debug(f"[{direction.upper()}] No engulfing confirmation.")
-            continue
-
-        # 6e. M1 momentum alignment
-        if not m1_momentum_aligned(direction):
-            log.debug(f"[{direction.upper()}] M1 not aligned.")
-            continue
-
-        log.info(f"🎯 HIGH-PROBABILITY SETUP: {direction.upper()} | near_zone={near_zone} | retest_both_mas={retest_both_mas}")
+        # Golden cross below 30
+        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 30
         
-        # 6f. IA Sentiment Filter validation (only called when technical setup is detected)
+        if in_demand and stoch_buy_trigger:
+            log.info(f"🎯 TECHNICAL BUY SETUP: Price in Demand Zone, StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
+            direction = "buy"
+        else:
+            log.debug(f"[BUY] Setup not aligned: in_demand={in_demand}, stoch_buy={stoch_buy_trigger}")
+            return None, 0.0
+
+    elif bias == "sell":
+        in_supply = price_in_zone(price, supply_zones)
+        stoch_k = last_closed["stoch_k"]
+        stoch_d = last_closed["stoch_d"]
+        prev_k = prev_closed["stoch_k"]
+        prev_d = prev_closed["stoch_d"]
+
+        # Death cross above 70
+        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 70
+
+        if in_supply and stoch_sell_trigger:
+            log.info(f"🎯 TECHNICAL SELL SETUP: Price in Supply Zone, StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
+            direction = "sell"
+        else:
+            log.debug(f"[SELL] Setup not aligned: in_supply={in_supply}, stoch_sell={stoch_sell_trigger}")
+            return None, 0.0
+
+    # ── 7. IA Sentiment Filter validation ────────────────────────────────────
+    if direction in ("buy", "sell"):
         if sentiment_filter.enabled:
             log.info("Analyzing market sentiment with Gemini...")
             sentiment_score = sentiment_filter.get_market_bias()
@@ -1020,19 +1104,19 @@ def evaluate_signal() -> Optional[str]:
             if direction == "buy" and sentiment_score < -0.2:
                 log.warning(f"🚫 Technical BUY setup ignored: Bearish market sentiment (Score: {sentiment_score})")
                 telegram_notifier.send_message(f"⚠️ *Trade BUY annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Baissier)")
-                return None
+                return None, 0.0
             if direction == "sell" and sentiment_score > 0.2:
                 log.warning(f"🚫 Technical SELL setup ignored: Bullish market sentiment (Score: {sentiment_score})")
                 telegram_notifier.send_message(f"⚠️ *Trade SELL annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Haussier)")
-                return None
+                return None, 0.0
                 
             log.info(f"✅ Trade validated by Sentiment Filter! Score = {sentiment_score}")
         else:
             log.debug("Sentiment filter is disabled (No API key). Skipping sentiment validation.")
 
-        return direction
+        return direction, atr
 
-    return None
+    return None, 0.0
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -1122,11 +1206,13 @@ def run():
                 continue
 
             # ── Signal evaluation ────────────────────────────────────────────
-            signal = evaluate_signal()
+            signal, atr = evaluate_signal()
 
             if signal in ("buy", "sell"):
-                if place_order_for_all_users(signal):
-                    telegram_notifier.send_message(f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*")
+                if place_order_for_all_users(signal, atr):
+                    sl_p = atr * ATR_SL_MULTIPLIER / PIP_VALUE
+                    tp_p = sl_p * RISK_REWARD_RATIO
+                    telegram_notifier.send_message(f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*\nSL: `{sl_p:.1f}` pips | TP: `{tp_p:.1f}` pips")
                     last_trade_time = current_time
                 else:
                     telegram_notifier.send_message(f"❌ *Erreur de transaction :* Signal {signal.upper()} détecté mais l'ordre n'a pas pu être placé sur les comptes.")

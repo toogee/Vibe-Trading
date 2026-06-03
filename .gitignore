@@ -1,4 +1,6 @@
 
 backend/.env
 backend/*.log
+*.log
 backend/__pycache__/
+
