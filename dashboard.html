@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vibe Trading — Tableau de Bord | Mon Espace Trading</title>
     <meta name="description" content="Suivez vos performances de trading GBPUSD en temps réel. Statut du bot SSED V2, historique des trades, profit total et taux de réussite.">
     <meta name="robots" content="noindex, nofollow">
@@ -45,6 +45,10 @@
         }
     </script>
     <style>
+        html, body {
+            touch-action: manipulation;
+        }
+
         /* Base & Scrollbar */
         body {
             background-color: #020617;
@@ -211,6 +215,19 @@
         @keyframes pulse-green { 0%,100%{box-shadow:0 0 6px #34d399;} 50%{box-shadow:0 0 14px #34d399;} }
         @keyframes pulse-red   { 0%,100%{box-shadow:0 0 6px #ef4444;} 50%{box-shadow:0 0 14px #ef4444;} }
     </style>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
 </head>
 <body class="flex h-screen text-sm sm:text-base font-sans">
 

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vibe Trading — Admin Control Center</title>
     <meta name="description"
         content="Panneau d'administration Vibe Trading. Gestion des utilisateurs, paiements, comptes MT5 et trades en temps réel.">
@@ -98,7 +98,24 @@
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
+<style>
+        html, body {
+            touch-action: manipulation;
+        }
+</style></head>
 
 <body class="bg-[#030712] text-slate-200 overflow-hidden h-screen flex">
 

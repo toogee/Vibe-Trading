@@ -69,8 +69,8 @@ SWING_LOOKBACK = 5
 ZONE_TOLERANCE_PIPS = 5
 
 # Consolidation / low-volatility filter
-MIN_CANDLE_BODY_PIPS = 2.0   # Minimum candle body to consider non-weak
-ADR_CONSOLIDATION_RATIO = 0.3  # If candle range < 30% of ADR → consolidating
+MIN_CANDLE_BODY_PIPS = 1.0   # RELAXÉ: 1.0 pip (était 2.0) — plus permissif
+ADR_CONSOLIDATION_RATIO = 0.15  # RELAXÉ: 15% ADR (était 30%) — filtre moins agressif
 
 # Trend detection lookback in M1 bars
 TREND_LOOKBACK = 20
@@ -105,6 +105,7 @@ class DailyState:
         self.trade_count  = 0
         self.loss_count   = 0
         self.halted       = False
+        self.processed_signals = set()
         log.info("Daily state reset.")
 
     def check_date_rollover(self):
@@ -475,8 +476,10 @@ def detect_trend(df: pd.DataFrame) -> str:
 def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
     """
     Returns True if market is ranging / low-volatility on recent bars.
+    RELAXÉ: Les DEUX conditions doivent être vraies (AND au lieu de OR)
+    pour éviter de filtrer des marchés actifs par erreur.
     Criteria:
-      1. Average candle body < MIN_CANDLE_BODY_PIPS
+      1. Average candle body < MIN_CANDLE_BODY_PIPS  AND
       2. Average range < ADR_CONSOLIDATION_RATIO * 20-bar ADR
     """
     recent = df.iloc[-lookback:]
@@ -487,9 +490,11 @@ def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
     body_weak  = avg_body  < pip(MIN_CANDLE_BODY_PIPS)
     range_low  = avg_range < (adr * ADR_CONSOLIDATION_RATIO)
 
-    if body_weak or range_low:
-        log.debug(f"Consolidation detected: avg_body={avg_body:.5f}, avg_range={avg_range:.5f}, adr={adr:.5f}")
+    # RELAXÉ: AND au lieu de OR — les deux critères doivent être vrais
+    if body_weak and range_low:
+        log.debug(f"Consolidation détectée (strict): avg_body={avg_body:.5f}, avg_range={avg_range:.5f}, adr={adr:.5f}")
         return True
+    log.debug(f"Marché actif: avg_body={avg_body:.5f} (seuil={pip(MIN_CANDLE_BODY_PIPS):.5f}), avg_range={avg_range:.5f}, adr={adr:.5f}")
     return False
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -838,14 +843,15 @@ def place_order_for_all_users(direction: str, atr: float) -> bool:
             
             # Save trade to Supabase
             save_trade({
-                "user_id": user_id,
-                "symbol": SYMBOL,
-                "type": direction.upper(),
-                "entry": price,
-                "sl": sl,
-                "tp": tp,
-                "profit": 0,
-                "status": "OPEN",
+                "user_id":   user_id,
+                "symbol":    SYMBOL,
+                "type":      direction.upper(),
+                "entry":     round(price, 5),
+                "sl":        round(sl, 5),
+                "tp":        round(tp, 5),
+                "lot_size":  dynamic_lot,   # ← Lot reel kalkile selon balans
+                "profit":    0,
+                "status":    "OPEN",
                 "open_time": datetime.utcnow().isoformat()
             })
             
@@ -868,48 +874,154 @@ def place_order_for_all_users(direction: str, atr: float) -> bool:
 # MONITOR CLOSED TRADES (for loss counting)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_seen_deal_tickets: set = set()
-
 def check_closed_trades():
-    """Check history for newly closed trades and update Supabase with real profit."""
-    tz = pytz.timezone(TIMEZONE)
-    today_start = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
-    today_start_utc = today_start.astimezone(pytz.utc)
+    """
+    Check if open trades in Supabase are still open in MT5.
+    If closed, update their status, profit, and close_time.
+    Also sends Telegram notifications for wins/losses.
+    """
+    try:
+        from db import supabase
+        # 1. Fetch all open trades from Supabase
+        resp = supabase.table("trades").select("*").eq("status", "OPEN").eq("symbol", SYMBOL).execute()
+        open_trades = resp.data if resp and resp.data else []
+        if not open_trades:
+            return
 
-    from_date = today_start_utc
-    to_date   = datetime.now(pytz.utc)
-    deals = mt5.history_deals_get(from_date, to_date)
-    if deals is None:
-        return
+        telegram_sent = False
 
-    for deal in deals:
-        if deal.magic != MAGIC_NUMBER:
-            continue
-        if deal.ticket in _seen_deal_tickets:
-            continue
-        if deal.type not in (mt5.DEAL_TYPE_BUY, mt5.DEAL_TYPE_SELL):
-            continue
-        _seen_deal_tickets.add(deal.ticket)
-        profit = deal.profit
-        log.info(f"Closed trade ticket={deal.ticket} | profit={profit:.2f}")
-        daily.record_trade_result(profit)
+        for trade in open_trades:
+            user_id = trade["user_id"]
+            trade_id = trade["id"]
+            open_time_str = trade["open_time"]
 
-        # ── Mettre à jour Supabase avec profit réel ──────────────────
-        try:
-            from db import supabase
-            # Trouver le trade OPEN correspondant dans Supabase (par ticket ou par open_time)
-            resp = supabase.table("trades").select("id").eq("status", "OPEN").eq("symbol", SYMBOL).limit(1).execute()
-            if resp.data:
-                trade_id = resp.data[0]["id"]
-                close_time = datetime.now(pytz.utc).isoformat()
+            # Fetch MT5 account for this user
+            mt5_acc = get_user_mt5_account(user_id)
+            if not mt5_acc:
+                continue
+
+            try:
+                plain_password = decrypt_password(mt5_acc['encrypted_password'])
+                login = int(mt5_acc['login_id'])
+                server = mt5_acc['server_name']
+
+                # Log in to user's account
+                if not mt5.login(login=login, password=plain_password, server=server):
+                    log.error(f"check_closed_trades: Failed to login to user {login}")
+                    update_mt5_status(mt5_acc['id'], 'ERROR')
+                    continue
+
+                update_mt5_status(mt5_acc['id'], 'CONNECTED')
+
+                # Check if position is still open in MT5
+                open_pos = get_open_position(MAGIC_NUMBER)
+                if open_pos is not None:
+                    # Trade is still open, do nothing
+                    continue
+
+                # Position is closed! Find the exit deal in history
+                from_date = datetime.now(pytz.utc) - timedelta(hours=24)
+                to_date   = datetime.now(pytz.utc) + timedelta(minutes=5)
+
+                deals = mt5.history_deals_get(from_date, to_date)
+                profit        = 0.0
+                found_deal    = False
+                deal_time_str = datetime.now(pytz.utc).isoformat()
+                close_reason  = None
+
+                if deals:
+                    # ── Récupérer TOUS les deals du bot, triés du plus récent ──
+                    bot_deals = [d for d in deals if d.magic == MAGIC_NUMBER]
+                    bot_deals.sort(key=lambda d: d.time, reverse=True)
+
+                    log.info(f"MT5 deals trouvés pour ce bot: {len(bot_deals)}")
+
+                    for deal in bot_deals:
+                        # Log chaque deal pour diagnostic
+                        log.info(
+                            f"  Deal: ticket={deal.ticket} | entry={deal.entry} | "
+                            f"reason={deal.reason} | profit={deal.profit:.2f} | "
+                            f"type={deal.type}"
+                        )
+
+                        # DEAL_ENTRY_IN = ouverture (profit=0) → ignorer
+                        if deal.entry == mt5.DEAL_ENTRY_IN:
+                            continue
+
+                        # C'est un deal de sortie (ENTRY_OUT ou autre)
+                        profit        = deal.profit
+                        deal_time_str = datetime.fromtimestamp(deal.time, pytz.utc).isoformat()
+                        found_deal    = True
+
+                        # Déterminer raison via deal.reason (le plus fiable)
+                        if deal.reason == mt5.DEAL_REASON_TP:
+                            close_reason = "TP"
+                        elif deal.reason == mt5.DEAL_REASON_SL:
+                            close_reason = "SL"
+                        elif deal.profit < 0:
+                            # Profit négatif → c'est forcément un SL ou perte
+                            close_reason = "SL"
+                            log.info(f"Raison inconnue mais profit négatif → forcé SL")
+                        elif deal.profit > 0:
+                            close_reason = "TP"
+                            log.info(f"Raison inconnue mais profit positif → forcé TP")
+                        else:
+                            close_reason = "MANUAL"
+                        break
+
+                    if not found_deal:
+                        log.warning(f"Aucun deal de fermeture trouvé pour trade {trade_id}. Vérifier MT5 history.")
+
+                # ── Statut final ──────────────────────────────────────────────
+                if close_reason == "TP":
+                    status = "WIN"
+                elif close_reason == "SL":
+                    status = "LOSS"
+                else:
+                    # Dernier recours absolu : profit
+                    status = "WIN" if profit > 0 else "LOSS"
+
+                log.info(
+                    f"✅ TRADE FERMÉ | ID={trade_id} | Raison={close_reason} | "
+                    f"Profit=${profit:.2f} | Statut={status}"
+                )
+
+                # ── Mise à jour Supabase ──────────────────────────────────────
                 supabase.table("trades").update({
-                    "status": "WIN" if profit > 0 else "LOSS",
-                    "profit": round(profit, 2),
-                    "close_time": close_time
+                    "status":     status,
+                    "profit":     round(profit, 2),
+                    "close_time": deal_time_str
                 }).eq("id", trade_id).execute()
-                log.info(f"Supabase updated: trade {trade_id} → {'WIN' if profit > 0 else 'LOSS'} ${profit:.2f}")
-        except Exception as e:
-            log.error(f"Error updating trade in Supabase: {e}")
+
+                log.info(f"Supabase updated: trade {trade_id} → {status} ${profit:.2f}")
+
+                # ── Daily limits (1 seule fois par signal) ───────────────────
+                signal_key = trade_id  # Utiliser trade_id (unique) au lieu de open_time
+                if signal_key not in daily.processed_signals:
+                    daily.record_trade_result(profit)
+                    daily.processed_signals.add(signal_key)
+
+                # ── Notification Telegram (1 seule fois par boucle) ──────────
+                if not telegram_sent:
+                    if status == "WIN":
+                        emoji       = "🎯"
+                        status_text = "Take Profit atteint ✅"
+                    else:
+                        emoji       = "❌"
+                        status_text = "Stop Loss atteint 🛑"
+                    profit_sign  = "+" if profit > 0 else ""
+                    reason_label = f" ({close_reason})" if close_reason else ""
+                    telegram_notifier.send_message(
+                        f"{emoji} *{status_text} sur GBP/USD !*{reason_label}\n"
+                        f"Bilan: `{profit_sign}${profit:.2f}`"
+                    )
+                    telegram_sent = True
+
+            except Exception as e:
+                log.error(f"Error checking trade closure for user {user_id}: {e}")
+
+    except Exception as e:
+        log.error(f"Error in check_closed_trades: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BREAK-EVEN MANAGEMENT
@@ -1068,14 +1180,19 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
         prev_k = prev_closed["stoch_k"]
         prev_d = prev_closed["stoch_d"]
 
-        # Golden cross below 30
-        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 30
-        
-        if in_demand and stoch_buy_trigger:
-            log.info(f"🎯 TECHNICAL BUY SETUP: Price in Demand Zone, StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
+        # RELAXÉ: Golden cross sous 80 (était 30) — plus de signaux capturés
+        # Niveau prioritaire si < 50 (oversold zone), acceptable jusqu'à 80
+        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 80
+        stoch_buy_strong  = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 40  # Bonus: signal fort
+
+        if stoch_buy_trigger:
+            if in_demand:
+                log.info(f"🎯 STRONG BUY SETUP: Demand Zone + StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
+            else:
+                log.info(f"📈 BUY SETUP (VWAP + Momentum): StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f}) — pas de zone requise")
             direction = "buy"
         else:
-            log.debug(f"[BUY] Setup not aligned: in_demand={in_demand}, stoch_buy={stoch_buy_trigger}")
+            log.debug(f"[BUY] Pas de setup: in_demand={in_demand}, stoch_k={stoch_k:.1f}, stoch_d={stoch_d:.1f}, prev_k={prev_k:.1f}")
             return None, 0.0
 
     elif bias == "sell":
@@ -1085,14 +1202,18 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
         prev_k = prev_closed["stoch_k"]
         prev_d = prev_closed["stoch_d"]
 
-        # Death cross above 70
-        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 70
+        # RELAXÉ: Death cross au-dessus de 20 (était 70) — plus de signaux capturés
+        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 20
+        stoch_sell_strong  = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 60  # Bonus: signal fort
 
-        if in_supply and stoch_sell_trigger:
-            log.info(f"🎯 TECHNICAL SELL SETUP: Price in Supply Zone, StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
+        if stoch_sell_trigger:
+            if in_supply:
+                log.info(f"🎯 STRONG SELL SETUP: Supply Zone + StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
+            else:
+                log.info(f"📉 SELL SETUP (VWAP + Momentum): StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f}) — pas de zone requise")
             direction = "sell"
         else:
-            log.debug(f"[SELL] Setup not aligned: in_supply={in_supply}, stoch_sell={stoch_sell_trigger}")
+            log.debug(f"[SELL] Pas de setup: in_supply={in_supply}, stoch_k={stoch_k:.1f}, stoch_d={stoch_d:.1f}, prev_k={prev_k:.1f}")
             return None, 0.0
 
     # ── 7. IA Sentiment Filter validation ────────────────────────────────────

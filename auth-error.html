@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Erreur d'Authentification - Vibe Trading</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,6 +23,10 @@
         }
     </script>
     <style>
+        html, body {
+            touch-action: manipulation;
+        }
+
         body {
             background-color: #020617; /* slate-950 */
             color: #f8fafc;
@@ -152,6 +156,19 @@
         .toast-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: #f8fafc; }
         .toast-message { font-size: 0.85rem; color: #94a3b8; line-height: 1.4; }
     </style>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 sm:p-8">
 

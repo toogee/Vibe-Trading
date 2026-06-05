@@ -97,3 +97,38 @@ CREATE POLICY "Users can view their own trades" ON public.trades FOR SELECT USIN
 
 -- Enable Realtime for trades table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trades;
+
+-- ==========================================
+-- ADMIN POLICIES (Row Level Security)
+-- ==========================================
+
+-- Helper function to detect administrators
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() AND role = 'admin'
+    ) OR auth.jwt() ->> 'email' IN ('tidem999@gmail.com', 'michelsonmichel99@yahoo.fr');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 1. Profiles Admin Policies
+CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USING (public.is_admin());
+
+-- 2. Subscriptions Admin Policies
+CREATE POLICY "Admins can view all subscriptions" ON public.subscriptions FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins can update all subscriptions" ON public.subscriptions FOR UPDATE USING (public.is_admin());
+
+-- 3. MT5 Accounts Admin Policies
+CREATE POLICY "Admins can view all mt5 accounts" ON public.mt5_accounts FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins can update all mt5 accounts" ON public.mt5_accounts FOR UPDATE USING (public.is_admin());
+CREATE POLICY "Admins can delete all mt5 accounts" ON public.mt5_accounts FOR DELETE USING (public.is_admin());
+
+-- 4. Trades Admin Policies
+CREATE POLICY "Admins can view all trades" ON public.trades FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins can insert all trades" ON public.trades FOR INSERT WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update all trades" ON public.trades FOR UPDATE USING (public.is_admin());
+CREATE POLICY "Admins can delete all trades" ON public.trades FOR DELETE USING (public.is_admin());
+
