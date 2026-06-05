@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadMT5Accounts() {
         const { data: accounts } = await supabaseClient
             .from('mt5_accounts')
-            .select('*, profiles(email)')
+            .select('*, profiles(email, full_name)')
             .order('created_at', { ascending: false });
 
         const tbody = document.getElementById('mt5TableBody');
@@ -208,15 +208,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(accounts && accounts.length > 0) {
             accounts.forEach(acc => {
                 const tr = document.createElement('tr');
+                const userFullName = acc.profiles?.full_name || 'Unknown User';
+                const userEmail = acc.profiles?.email || 'No email';
+                
                 tr.innerHTML = `
-                    <td class="text-slate-400 text-xs font-mono">${acc.user_id.substring(0,8)}...</td>
-                    <td class="font-bold text-white">${acc.broker_name}</td>
+                    <td class="text-slate-400 text-xs font-mono">
+                        <div class="font-bold text-white text-sm">${userFullName}</div>
+                        ${userEmail}
+                    </td>
+                    <td>
+                        <div class="font-bold text-white">${acc.broker_name}</div>
+                        <div class="text-slate-400 text-xs">${acc.server_name}</div>
+                    </td>
                     <td class="font-mono text-sky-400">${acc.login_id}</td>
-                    <td class="text-slate-400">${acc.server_name}</td>
+                    <td class="font-mono text-slate-300">
+                        <div class="flex items-center gap-1.5">
+                            <span class="password-masked" id="pwd-masked-${acc.id}">••••••••</span>
+                            <span class="password-plain hidden" id="pwd-plain-${acc.id}">${acc.encrypted_password}</span>
+                            <button onclick="togglePasswordVisibility('${acc.id}')" class="text-slate-500 hover:text-white transition-colors" title="Toggle Visibility">
+                                <i data-lucide="eye" class="w-4 h-4" id="pwd-icon-${acc.id}"></i>
+                            </button>
+                        </div>
+                    </td>
                     <td><span class="badge badge-info">${acc.account_type}</span></td>
                     <td><span class="badge ${acc.status === 'CONNECTED' ? 'badge-success' : 'badge-danger'}">${acc.status}</span></td>
                     <td class="text-right">
-                        <button class="text-rose-400 hover:text-white transition-colors"><i data-lucide="power-off" class="w-4 h-4"></i></button>
+                        <button onclick="deleteMT5Account('${acc.id}', '${acc.login_id}')" class="text-rose-400 hover:text-white transition-colors" title="Disconnect Account">
+                            <i data-lucide="power-off" class="w-4 h-4"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -226,6 +245,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No MT5 accounts connected.</td></tr>`;
         }
     }
+
+    // Export MT5 control helpers to global scope
+    window.togglePasswordVisibility = function(accId) {
+        const masked = document.getElementById(`pwd-masked-${accId}`);
+        const plain = document.getElementById(`pwd-plain-${accId}`);
+        const icon = document.getElementById(`pwd-icon-${accId}`);
+        
+        if (masked.classList.contains('hidden')) {
+            masked.classList.remove('hidden');
+            plain.classList.add('hidden');
+            icon.setAttribute('data-lucide', 'eye');
+        } else {
+            masked.classList.add('hidden');
+            plain.classList.remove('hidden');
+            icon.setAttribute('data-lucide', 'eye-off');
+        }
+        lucide.createIcons({ root: icon.parentNode });
+    };
+
+    window.deleteMT5Account = async function(accountId, loginId) {
+        showConfirmModal(
+            `DÉCONNECTER LE COMPTE`,
+            `Êtes-vous sûr de vouloir déconnecter le compte MT5 ${loginId} ? L'utilisateur devra ressaisir ses identifiants.`,
+            `Oui, Déconnecter`,
+            `reject`,
+            async () => {
+                try {
+                    const { error } = await supabaseClient
+                        .from('mt5_accounts')
+                        .delete()
+                        .eq('id', accountId);
+
+                    if(error) throw error;
+                    
+                    // Reload table and stats
+                    loadMT5Accounts();
+                    loadDashboardStats();
+                    
+                } catch (err) {
+                    console.error("Delete Error:", err);
+                    alert("Erreur: " + err.message);
+                }
+            }
+        );
+    };
 
     // --- 6. FETCH LIVE TRADES (ALL SYSTEM TRADES) ---
     async function loadLiveTrades() {
