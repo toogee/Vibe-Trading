@@ -33,8 +33,8 @@ SYMBOL          = "GBPUSD"
 DIRECTION       = "buy"          # <<< Changer en "sell" si ou vle teste vann
 MAGIC_NUMBER    = 20240601
 RISK_PERCENT    = 1.0
-STOP_LOSS_PIP   = 5              # SL in pips
-TAKE_PROFIT_PIP = 11             # TP in pips
+STOP_LOSS_PIP   = 0              # SL in pips (0 to disable)
+TAKE_PROFIT_PIP = 0              # TP in pips (0 to disable)
 PIP_VALUE       = 0.0001
 MAX_SPREAD_PIPS = 3.0
 # ──────────────────────────────────────────────────────────────────────────────
@@ -185,22 +185,30 @@ def run_test():
         log.info(f"   Lot calculé : {lot}")
 
         # ── Appliquer le stop level minimum du broker ─────────────────
-        min_dist_pips = sym_info.trade_stops_level / 10.0
-        effective_sl  = max(STOP_LOSS_PIP,   min_dist_pips + 2)
-        effective_tp  = max(TAKE_PROFIT_PIP, min_dist_pips + 2)
-        log.info(f"   Stop level broker  : {min_dist_pips:.1f} pips minimum")
-        log.info(f"   SL effectif utilisé : {effective_sl:.1f} pips")
-        log.info(f"   TP effectif utilisé : {effective_tp:.1f} pips")
+        if STOP_LOSS_PIP == 0:
+            sl = 0.0
+            tp = 0.0
+            log.info("   Stops désactivés (SL=0, TP=0)")
+        else:
+            min_dist_pips = sym_info.trade_stops_level / 10.0
+            effective_sl  = max(STOP_LOSS_PIP,   min_dist_pips + 2)
+            effective_tp  = max(TAKE_PROFIT_PIP, min_dist_pips + 2)
+            log.info(f"   Stop level broker  : {min_dist_pips:.1f} pips minimum")
+            log.info(f"   SL effectif utilisé : {effective_sl:.1f} pips")
+            log.info(f"   TP effectif utilisé : {effective_tp:.1f} pips")
+            
+            if DIRECTION == "buy":
+                sl = round(tick.ask - effective_sl * PIP_VALUE, 5)
+                tp = round(tick.ask + effective_tp * PIP_VALUE, 5)
+            else:
+                sl = round(tick.bid + effective_sl * PIP_VALUE, 5)
+                tp = round(tick.bid - effective_tp * PIP_VALUE, 5)
 
         if DIRECTION == "buy":
             price = tick.ask
-            sl    = round(price - effective_sl * PIP_VALUE, 5)
-            tp    = round(price + effective_tp * PIP_VALUE, 5)
             order_type = mt5.ORDER_TYPE_BUY
         else:
             price = tick.bid
-            sl    = round(price + effective_sl * PIP_VALUE, 5)
-            tp    = round(price - effective_tp * PIP_VALUE, 5)
             order_type = mt5.ORDER_TYPE_SELL
 
         # Auto-détecter le filling mode supporté par ce broker

@@ -10,6 +10,7 @@
   - Cartes de métriques de performance (Statut du Bot, Profit Total, Taux de réussite, Drawdown Max).
   - Historique des transactions récentes et liste des positions ouvertes.
   - Section d'abonnement (Starter, Pro, VIP Elite) avec affichage et conversion dynamique en Gourdes Haïtiennes (HTG) basé sur le taux de 134 HTG pour 1 USD.
+- **Guide de Démarrage (`guide.html`)** : Guide interactif et bilingue (Français/Kreyòl) expliquant étape par étape l'inscription chez le broker avec lien partenaire, la vérification KYC, la création de compte MT5, le dépôt minimal de 20 USD, la connexion au tableau de bord, et l'activation du bot SSED V2.
 - **Authentification (`login.html`, `signup.html`)** : Pages de connexion et d'inscription modernes, rapides et responsives.
 - **Traduction Complète** : L'ensemble de la plateforme (Landing Page, Dashboard, menus, modales d'alerte) a été traduit et adapté en français.
 - **Interactivité** : Gestion du menu latéral, des onglets, des modales (ex: configuration MT5, abonnements), et alertes interactives (profil utilisateur, modes d'apparence).
@@ -17,6 +18,7 @@
 ## 3. Structure des Fichiers
 - `index.html` : Landing page publique (Vitrine).
 - `dashboard.html` : Tableau de bord utilisateur (Interface privée et connectée).
+- `guide.html` : Page explicative et guide de démarrage bilingue (Français/Kreyòl).
 - `login.html` : Page de connexion.
 - `signup.html` : Page de création de compte.
 - `style.css` : Fichier CSS global gérant le design system (variables), les animations, le mode clair de la landing page et le dark mode ultra-premium du dashboard.
