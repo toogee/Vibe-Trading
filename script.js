@@ -80,4 +80,25 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // 5. Redirection dynamique si l'utilisateur est déjà connecté
+    if (window.supabaseClient) {
+        window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            if (session && session.user) {
+                // Remplacer tous les liens vers signup.html par dashboard.html
+                const ctaLinks = document.querySelectorAll('a[href="signup.html"]');
+                ctaLinks.forEach(link => {
+                    link.href = 'dashboard.html';
+                    
+                    // Modifier également le texte pour être plus cohérent
+                    const text = link.textContent.trim();
+                    if (text === 'Commencer Maintenant') {
+                        link.textContent = 'Accéder au Tableau de Bord';
+                    } else if (text === 'S\'abonner Maintenant' || text === 'Obtenir l\'Offre Pro' || text === 'Devenir VIP') {
+                        link.textContent = 'Accéder au Tableau de Bord';
+                    }
+                });
+            }
+        }).catch(err => console.error("Erreur vérification session:", err));
+    }
 });
