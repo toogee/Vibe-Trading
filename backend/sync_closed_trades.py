@@ -52,7 +52,7 @@ for user_id in users:
 
     # Recuperer historique 30 derniers jours
     from_dt = datetime.now(pytz.utc) - timedelta(days=30)
-    to_dt   = datetime.now(pytz.utc) + timedelta(minutes=5)
+    to_dt   = datetime.now(pytz.utc) + timedelta(days=2) # Fix Timezone offset issue
     deals   = mt5.history_deals_get(from_dt, to_dt)
 
     if not deals:
@@ -145,10 +145,8 @@ print(f"\n{'=' * 65}")
 print(f"  ACTION: Supprimer TOUS les trades actuels dans Supabase")
 print(f"          et reimporter {len(all_real_trades)} trade(s) reel(s) MT5")
 print(f"{'=' * 65}")
-confirm = input("\nConfirmer ? (oui/non): ").strip().lower()
-if confirm not in ("oui", "o", "yes", "y"):
-    print("Annule.")
-    mt5.shutdown(); sys.exit(0)
+# Automatically confirming sync
+print("Auto-confirmed.")
 
 # ── Supprimer vieux trades Supabase ──────────────────────────────────────
 print("\nSuppression des vieux trades Supabase...")

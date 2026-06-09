@@ -916,7 +916,7 @@ def check_closed_trades():
 
                 # Position is closed! Find the exit deal in history
                 from_date = datetime.now(pytz.utc) - timedelta(days=2)
-                to_date = datetime.now(pytz.utc) + timedelta(minutes=5)
+                to_date = datetime.now(pytz.utc) + timedelta(days=2) # Fix Timezone offset issue
 
                 deals = mt5.history_deals_get(from_date, to_date)
                 profit = 0.0
@@ -927,12 +927,16 @@ def check_closed_trades():
                     # Sort deals by time descending to get the latest close deal
                     sorted_deals = sorted(deals, key=lambda d: d.time, reverse=True)
                     for deal in sorted_deals:
-                        if deal.magic == MAGIC_NUMBER and deal.type in (mt5.DEAL_TYPE_BUY, mt5.DEAL_TYPE_SELL):
-                            # The exit deal typically has a non-zero profit
+                        # We only want the EXIT deal (mt5.DEAL_ENTRY_OUT = 1)
+                        if deal.magic == MAGIC_NUMBER and deal.entry == mt5.DEAL_ENTRY_OUT:
                             profit = deal.profit
                             deal_time_str = datetime.fromtimestamp(deal.time, pytz.utc).isoformat()
                             found_deal = True
                             break
+
+                if not found_deal:
+                    log.warning(f"Position closed but no exit deal found for user {user_id} in history. Skipping update.")
+                    continue
 
                 # Update Supabase for this specific trade ID
                 status = "WIN" if profit > 0 else "LOSS"
