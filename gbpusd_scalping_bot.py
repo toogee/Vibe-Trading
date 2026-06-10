@@ -434,6 +434,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     k, d = calculate_stoch_rsi(df, period=14)
     df["stoch_k"] = k
     df["stoch_d"] = d
+    df["sma50"] = df["close"].rolling(window=50).mean()
+    df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1092,7 +1094,7 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     df_m1 = add_indicators(df_m1_raw)
 
     # Use only rows where indicators are valid
-    df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d"]).copy()
+    df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d", "sma50", "ema200"]).copy()
     if len(df) < 20:
         return None, 0.0
 
@@ -1107,55 +1109,70 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     price  = last_closed["close"]
     vwap   = last_closed["vwap"]
     atr    = last_closed["atr"]
+    sma50  = last_closed["sma50"]
+    ema200 = last_closed["ema200"]
+    stoch_k = last_closed["stoch_k"]
+    stoch_d = last_closed["stoch_d"]
+    prev_k = prev_closed["stoch_k"]
+    prev_d = prev_closed["stoch_d"]
 
-    # ── 4. Determine VWAP Bias ───────────────────────────────────────────────
-    if price > vwap:
-        bias = "buy"
-    elif price < vwap:
-        bias = "sell"
-    else:
-        log.debug(f"Price on VWAP. Neutral bias.")
-        return None, 0.0
-
-    # ── 5. Supply / Demand zones ─────────────────────────────────────────────
+    # Supply / Demand zones
     demand_zones, supply_zones = detect_zones(df.iloc[:-1])  # exclude current bar
 
-    # ── 6. Direction-specific checks ─────────────────────────────────────────
+    # ── 4. Calculate Scores ──────────────────────────────────────────────────
+    buy_score = 0.0
+    sell_score = 0.0
+
+    # 4.1 Trend Alignment (VWAP, EMA200, SMA50)
+    if price > vwap: buy_score += 1.0
+    if price < vwap: sell_score += 1.0
+
+    if price > ema200: buy_score += 1.0
+    if price < ema200: sell_score += 1.0
+
+    if price > sma50: buy_score += 1.0
+    if price < sma50: sell_score += 1.0
+
+    # 4.2 M1 Momentum
+    if m1_momentum_aligned("buy"): buy_score += 1.0
+    if m1_momentum_aligned("sell"): sell_score += 1.0
+
+    # 4.3 Price Action
+    if is_engulfing(prev_closed, last_closed, "buy") or is_rejection_candle(last_closed, "buy"):
+        buy_score += 1.0
+    if is_engulfing(prev_closed, last_closed, "sell") or is_rejection_candle(last_closed, "sell"):
+        sell_score += 1.0
+
+    # 4.4 Supply/Demand
+    in_demand = price_in_zone(price, demand_zones)
+    in_supply = price_in_zone(price, supply_zones)
+    if in_demand: buy_score += 1.5
+    if in_supply: sell_score += 1.5
+
+    # 4.5 Break & Retest
+    if detect_break_and_retest(df.iloc[:-1], "buy", demand_zones, sma50, ema200):
+        buy_score += 1.5
+    if detect_break_and_retest(df.iloc[:-1], "sell", supply_zones, sma50, ema200):
+        sell_score += 1.5
+
+    # 4.6 StochRSI Trigger
+    stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 20
+    stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 80
+    if stoch_buy_trigger: buy_score += 2.0
+    if stoch_sell_trigger: sell_score += 2.0
+
+    log.debug(f"Current Scores - BUY: {buy_score}/10 | SELL: {sell_score}/10")
+
+    # ── 5. Evaluate and Select Direction ─────────────────────────────────────
     direction = None
-
-    if bias == "buy":
-        in_demand = price_in_zone(price, demand_zones)
-        stoch_k = last_closed["stoch_k"]
-        stoch_d = last_closed["stoch_d"]
-        prev_k = prev_closed["stoch_k"]
-        prev_d = prev_closed["stoch_d"]
-
-        # Golden cross below 20
-        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 20
-        
-        if in_demand and stoch_buy_trigger:
-            log.info(f"🎯 TECHNICAL BUY SETUP: Price in Demand Zone, StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
-            direction = "buy"
-        else:
-            log.debug(f"[BUY] Setup not aligned: in_demand={in_demand}, stoch_buy={stoch_buy_trigger}")
-            return None, 0.0
-
-    elif bias == "sell":
-        in_supply = price_in_zone(price, supply_zones)
-        stoch_k = last_closed["stoch_k"]
-        stoch_d = last_closed["stoch_d"]
-        prev_k = prev_closed["stoch_k"]
-        prev_d = prev_closed["stoch_d"]
-
-        # Death cross above 80
-        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 80
-
-        if in_supply and stoch_sell_trigger:
-            log.info(f"🎯 TECHNICAL SELL SETUP: Price in Supply Zone, StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
-            direction = "sell"
-        else:
-            log.debug(f"[SELL] Setup not aligned: in_supply={in_supply}, stoch_sell={stoch_sell_trigger}")
-            return None, 0.0
+    if buy_score >= 6.5 and buy_score > sell_score:
+        direction = "buy"
+        log.info(f"🎯 SCORE SYSTEM BUY SETUP: Score = {buy_score}/10")
+    elif sell_score >= 6.5 and sell_score > buy_score:
+        direction = "sell"
+        log.info(f"🎯 SCORE SYSTEM SELL SETUP: Score = {sell_score}/10")
+    else:
+        return None, 0.0
 
     # ── 7. IA Sentiment Filter validation ────────────────────────────────────
     if direction in ("buy", "sell"):
