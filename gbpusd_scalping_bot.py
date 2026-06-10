@@ -104,6 +104,8 @@ class DailyState:
         self.date         = datetime.now(pytz.timezone(TIMEZONE)).date()
         self.trade_count  = 0
         self.loss_count   = 0
+        self.win_count    = 0
+        self.daily_profit = 0.0
         self.halted       = False
         self.processed_signals = set()
         log.info("Daily state reset.")
@@ -118,6 +120,9 @@ class DailyState:
         if self.halted:
             log.info("Trading halted for today (2 losses reached).")
             return False
+        if self.win_count >= 1 or self.daily_profit > 0:
+            log.info("Daily Profit Target reached (One and Done). Trading halted for today.")
+            return False
         if self.trade_count >= MAX_DAILY_TRADES:
             log.info("Max daily trades reached.")
             return False
@@ -128,6 +133,10 @@ class DailyState:
         log.info(f"Trade opened. Daily count: {self.trade_count}/{MAX_DAILY_TRADES}")
 
     def record_trade_result(self, profit: float):
+        self.daily_profit += profit
+        if profit > 0:
+            self.win_count += 1
+            log.info(f"Win recorded! Daily Profit is now > 0. (One and Done triggered).")
         if profit < 0:
             self.loss_count += 1
             log.info(f"Loss recorded. Daily losses: {self.loss_count}/{MAX_DAILY_LOSSES}")
