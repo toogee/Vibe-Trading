@@ -43,7 +43,7 @@ SYMBOL          = "GBPUSD"
 MAGIC_NUMBER    = 20240601          # Unique ID for this bot's trades
 RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
 ATR_SL_MULTIPLIER = 1.5             # SL is 1.5 * ATR
-RISK_REWARD_RATIO = 2.2             # TP is 2.2 * SL (risk/reward ratio)
+RISK_REWARD_RATIO = 1.5             # TP is 1.5 * SL (risk/reward ratio)
 PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
 MAX_DAILY_TRADES= 3
 MAX_DAILY_LOSSES= 2
@@ -521,7 +521,7 @@ def detect_zones(df: pd.DataFrame) -> Tuple[List[Tuple], List[Tuple]]:
         # Demand zone: small base candle followed by a strong bullish candle
         if (body_c < pip(3) and                           # base candle small
                 nxt["close"] > nxt["open"] and            # next is bullish
-                body_nxt > pip(4) and                     # strong move
+                body_nxt > pip(7) and                     # strong move (7 pips)
                 nxt["close"] > c["high"]):                # breaks above base
             zone_low  = c["low"]  - tol
             zone_high = c["high"] + tol
@@ -530,7 +530,7 @@ def detect_zones(df: pd.DataFrame) -> Tuple[List[Tuple], List[Tuple]]:
         # Supply zone: small base candle followed by a strong bearish candle
         if (body_c < pip(3) and
                 nxt["close"] < nxt["open"] and
-                body_nxt > pip(4) and
+                body_nxt > pip(7) and
                 nxt["close"] < c["low"]):
             zone_low  = c["low"]  - tol
             zone_high = c["high"] + tol
@@ -1006,8 +1006,9 @@ def manage_open_trades_breakeven():
                 # Check for BUY
                 if pos.type == mt5.ORDER_TYPE_BUY:
                     profit_pips = (pos.price_current - pos.price_open) / PIP_VALUE
-                    # If profit >= 6 pips and SL is not already at or above entry
-                    if profit_pips >= 6.0 and pos.sl < pos.price_open:
+                    distance_to_tp = (pos.tp - pos.price_current) / PIP_VALUE if pos.tp > 0 else 999
+                    # If profit >= 6 pips OR price is within 2 pips of TP, and SL is not already at/above entry
+                    if (profit_pips >= 6.0 or distance_to_tp <= 2.0) and pos.sl < pos.price_open:
                         request = {
                             "action": mt5.TRADE_ACTION_SLTP,
                             "position": pos.ticket,
@@ -1022,8 +1023,9 @@ def manage_open_trades_breakeven():
                 # Check for SELL
                 elif pos.type == mt5.ORDER_TYPE_SELL:
                     profit_pips = (pos.price_open - pos.price_current) / PIP_VALUE
-                    # If profit >= 6 pips and SL is not already at or below entry
-                    if profit_pips >= 6.0 and (pos.sl > pos.price_open or pos.sl == 0.0):
+                    distance_to_tp = (pos.price_current - pos.tp) / PIP_VALUE if pos.tp > 0 else 999
+                    # If profit >= 6 pips OR price is within 2 pips of TP, and SL is not already at/below entry
+                    if (profit_pips >= 6.0 or distance_to_tp <= 2.0) and (pos.sl > pos.price_open or pos.sl == 0.0):
                         request = {
                             "action": mt5.TRADE_ACTION_SLTP,
                             "position": pos.ticket,
@@ -1128,8 +1130,8 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
         prev_k = prev_closed["stoch_k"]
         prev_d = prev_closed["stoch_d"]
 
-        # Golden cross below 30
-        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 30
+        # Golden cross below 20
+        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 20
         
         if in_demand and stoch_buy_trigger:
             log.info(f"🎯 TECHNICAL BUY SETUP: Price in Demand Zone, StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
@@ -1145,8 +1147,8 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
         prev_k = prev_closed["stoch_k"]
         prev_d = prev_closed["stoch_d"]
 
-        # Death cross above 70
-        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 70
+        # Death cross above 80
+        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 80
 
         if in_supply and stoch_sell_trigger:
             log.info(f"🎯 TECHNICAL SELL SETUP: Price in Supply Zone, StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
