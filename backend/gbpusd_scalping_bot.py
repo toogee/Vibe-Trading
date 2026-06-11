@@ -48,6 +48,8 @@ PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
 MAX_DAILY_TRADES= 3
 MAX_DAILY_LOSSES= 2
 
+MASTER_ACCOUNT_LOGIN = os.getenv("MASTER_ACCOUNT_LOGIN", "")
+
 # Session: 06:00–17:00 London time (UTC+1 BST / UTC+0 GMT)
 SESSION_START_HOUR = 6
 SESSION_END_HOUR   = 17
