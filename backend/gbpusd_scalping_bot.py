@@ -1034,13 +1034,52 @@ def check_closed_trades():
         log.error(f"Error in check_closed_trades: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BREAK-EVEN MANAGEMENT
+# TRADE MANAGEMENT (BREAK-EVEN & NEAR TP CLOSE)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def manage_open_trades_breakeven():
+near_tp_timers = {}
+
+def close_trade_now(login: int, pos) -> bool:
+    tick = mt5.symbol_info_tick(pos.symbol)
+    if not tick: return False
+    
+    close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
+    price = tick.bid if pos.type == mt5.ORDER_TYPE_BUY else tick.ask
+    
+    sym_info = mt5.symbol_info(pos.symbol)
+    filling_mode = mt5.ORDER_FILLING_IOC
+    if sym_info:
+        if sym_info.filling_mode & 1:
+            filling_mode = mt5.ORDER_FILLING_FOK
+        elif sym_info.filling_mode & 2:
+            filling_mode = mt5.ORDER_FILLING_IOC
+
+    req = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "position": pos.ticket,
+        "symbol": pos.symbol,
+        "volume": pos.volume,
+        "type": close_type,
+        "price": price,
+        "deviation": 20,
+        "magic": pos.magic,
+        "comment": "Near_TP_Close",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": filling_mode,
+    }
+    res = mt5.order_send(req)
+    if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+        log.info(f"Successfully closed trade {pos.ticket} for {login} (Near TP)")
+        return True
+    else:
+        log.error(f"Failed to close trade {pos.ticket} for {login}: {res}")
+        return False
+
+def manage_open_trades():
     """
     Checks if any open positions are > +6 pips in profit.
     If so, moves the Stop-Loss to the entry price (Break-Even) to secure capital.
+    Also handles Near TP closing logic.
     """
     active_users = get_active_users()
     if not active_users: return
@@ -1096,8 +1135,35 @@ def manage_open_trades_breakeven():
                         res = mt5.order_send(request)
                         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
                             log.info(f"Break-even applied for user {login} SELL {pos.ticket}")
+                
+                # Near TP Close Logic
+                if pos.tp > 0:
+                    dist_to_tp = 0.0
+                    if pos.type == mt5.ORDER_TYPE_BUY:
+                        dist_to_tp = (pos.tp - pos.price_current) / PIP_VALUE
+                    elif pos.type == mt5.ORDER_TYPE_SELL:
+                        dist_to_tp = (pos.price_current - pos.tp) / PIP_VALUE
+                        
+                    timer_key = f"{login}_{pos.ticket}"
+                    
+                    if 0 < dist_to_tp <= 2.0:
+                        if timer_key not in near_tp_timers:
+                            near_tp_timers[timer_key] = time.time()
+                            log.info(f"Near TP zone entered for {login} ticket {pos.ticket}. Dist: {dist_to_tp:.1f} pips")
+                        else:
+                            elapsed = time.time() - near_tp_timers[timer_key]
+                            if elapsed >= 120:  # 2 minutes
+                                if close_trade_now(login, pos):
+                                    master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
+                                    if not master_login or str(login) == master_login:
+                                        telegram_notifier.send_message(f"⚠️ *Near TP Close* sur GBP/USD !\nLa position a été fermée automatiquement car elle stagnait à {dist_to_tp:.1f} pips du TP pendant 2 minutes.")
+                                    del near_tp_timers[timer_key]
+                    else:
+                        if timer_key in near_tp_timers:
+                            del near_tp_timers[timer_key]
+
         except Exception as e:
-            log.error(f"Error checking break-even for user {user_id}: {e}")
+            log.error(f"Error managing trades for user {user_id}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SYNC BALANCES
@@ -1287,8 +1353,8 @@ def run():
         try:
             check_closed_trades()
             
-            # Manage break-even for open positions
-            manage_open_trades_breakeven()
+            # Manage break-even and near-TP close for open positions
+            manage_open_trades()
 
             # Sync balances every 5 minutes (300 seconds)
             current_time = time.time()
