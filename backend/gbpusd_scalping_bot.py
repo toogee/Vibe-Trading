@@ -105,7 +105,9 @@ class DailyState:
         self.trade_count  = 0
         self.loss_count   = 0
         self.halted       = False
+        self.halt_reason  = ""
         self.processed_signals = set()
+        self.notified_news = set()
         log.info("Daily state reset.")
 
     def check_date_rollover(self):
@@ -133,7 +135,12 @@ class DailyState:
             log.info(f"Loss recorded. Daily losses: {self.loss_count}/{MAX_DAILY_LOSSES}")
             if self.loss_count >= MAX_DAILY_LOSSES:
                 self.halted = True
+                self.halt_reason = "2 Stop Loss atteints 🛑"
                 log.warning("2 losses hit — trading halted for the rest of the day.")
+        else:
+            self.halted = True
+            self.halt_reason = "1 Take Profit atteint ✅"
+            log.info("1 TP hit — trading halted for the rest of the day.")
 
 daily = DailyState()
 
@@ -192,8 +199,8 @@ class NewsFilter:
                 (datetime.now(pytz.utc) - self._last_fetch).total_seconds() > self._fetch_interval_minutes * 60):
             self._fetch_events()
 
-    def is_news_window(self) -> bool:
-        """Return True if current time is within the news buffer window."""
+    def is_news_window(self) -> Tuple[bool, Optional[str]]:
+        """Return (True, title) if current time is within the news buffer window."""
         self._ensure_fresh()
         now = datetime.now(pytz.timezone(TIMEZONE))
         buffer = timedelta(minutes=NEWS_BUFFER_MINUTES)
@@ -201,8 +208,8 @@ class NewsFilter:
             event_time = event["time"]
             if (event_time - buffer) <= now <= (event_time + buffer):
                 log.warning(f"NEWS WINDOW: {event['currency']} '{event['title']}' at {event_time.strftime('%H:%M')} — skipping trade.")
-                return True
-        return False
+                return True, event['title']
+        return False, None
 
 news_filter = NewsFilter()
 
@@ -998,8 +1005,11 @@ def check_closed_trades():
                 # ── Daily limits (1 seule fois par signal) ───────────────────
                 signal_key = trade_id  # Utiliser trade_id (unique) au lieu de open_time
                 if signal_key not in daily.processed_signals:
+                    was_halted = daily.halted
                     daily.record_trade_result(profit)
                     daily.processed_signals.add(signal_key)
+                    if daily.halted and not was_halted:
+                        telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
 
                 # ── Notification Telegram (1 seule fois par boucle) ──────────
                 if not telegram_sent:
@@ -1009,11 +1019,9 @@ def check_closed_trades():
                     else:
                         emoji       = "❌"
                         status_text = "Stop Loss atteint 🛑"
-                    profit_sign  = "+" if profit > 0 else ""
                     reason_label = f" ({close_reason})" if close_reason else ""
                     telegram_notifier.send_message(
-                        f"{emoji} *{status_text} sur GBP/USD !*{reason_label}\n"
-                        f"Bilan: `{profit_sign}${profit:.2f}`"
+                        f"{emoji} *{status_text} sur GBP/USD !*{reason_label}"
                     )
                     telegram_sent = True
 
@@ -1315,7 +1323,15 @@ def run():
                 continue
 
             # ── News filter gate ─────────────────────────────────────────────
-            if news_filter.is_news_window():
+            is_news, news_title = news_filter.is_news_window()
+            if is_news:
+                if news_title not in daily.notified_news:
+                    telegram_notifier.send_message(
+                        f"⚠️ *Trading Suspendu (News)*\n"
+                        f"Le bot ne prendra pas de trade pour le moment à cause de l'annonce :\n"
+                        f"`{news_title}`"
+                    )
+                    daily.notified_news.add(news_title)
                 time.sleep(60)
                 continue
 
