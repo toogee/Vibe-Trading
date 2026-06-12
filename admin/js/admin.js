@@ -76,62 +76,108 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- 3. FETCH DASHBOARD STATS & INITIALIZE CHART ---
     async function loadDashboardStats() {
-        // Fetch total users
-        const { count: usersCount } = await supabaseClient
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
-        
-        // Fetch MT5 Accounts
-        const { count: mt5Count } = await supabaseClient
-            .from('mt5_accounts')
-            .select('*', { count: 'exact', head: true });
+        try {
+            // Fetch total users
+            const { count: usersCount } = await supabaseClient
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+            
+            // Fetch MT5 Accounts
+            const { count: mt5Count } = await supabaseClient
+                .from('mt5_accounts')
+                .select('*', { count: 'exact', head: true });
 
-        // Update UI
-        document.getElementById('statTotalUsers').innerText = usersCount || 0;
-        document.getElementById('statConnectedMT5').innerText = mt5Count || 0;
-        document.getElementById('statActiveSubs').innerText = Math.floor((usersCount || 0) * 0.4); // Mock active subs
-        document.getElementById('statPendingPayments').innerText = 0; // Mock pending
+            // Fetch all subscriptions to calculate real stats and monthly revenue
+            const { data: subscriptionsData } = await supabaseClient
+                .from('subscriptions')
+                .select('created_at, plan_name, status');
 
-        // Initialize Chart.js
-        const ctx = document.getElementById('revenueChart');
-        if(ctx) {
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-                    datasets: [{
-                        label: 'Revenue ($)',
-                        data: [1200, 1900, 3000, 5000, 4800, 8000, 12000],
-                        borderColor: '#0ea5e9', // Sky 500
-                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#0ea5e9',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#0ea5e9',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
+            let activeCount = 0;
+            let pendingCount = 0;
+            const monthlyRevenue = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            const currentYear = new Date().getFullYear();
+
+            if (subscriptionsData) {
+                subscriptionsData.forEach(sub => {
+                    if (sub.status === 'ACTIVE') {
+                        activeCount++;
+                        if (sub.created_at) {
+                            const date = new Date(sub.created_at);
+                            if (date.getFullYear() === currentYear) {
+                                const month = date.getMonth();
+                                let price = 0;
+                                const plan = (sub.plan_name || '').toLowerCase();
+                                if (plan.includes('starter')) {
+                                    price = 50;
+                                } else if (plan.includes('pro')) {
+                                    price = 120;
+                                } else if (plan.includes('vip')) {
+                                    price = 200;
+                                }
+                                if (month >= 0 && month < 12) {
+                                    monthlyRevenue[month] += price;
+                                }
+                            }
+                        }
+                    } else if (sub.status === 'PENDING') {
+                        pendingCount++;
+                    }
+                });
+            }
+
+            // Update UI
+            document.getElementById('statTotalUsers').innerText = usersCount || 0;
+            document.getElementById('statConnectedMT5').innerText = mt5Count || 0;
+            document.getElementById('statActiveSubs').innerText = activeCount;
+            document.getElementById('statPendingPayments').innerText = pendingCount;
+
+            // Initialize Chart.js
+            const ctx = document.getElementById('revenueChart');
+            if(ctx) {
+                if (window.myRevenueChart) {
+                    window.myRevenueChart.destroy();
+                }
+                
+                window.myRevenueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'Revenue ($)',
+                            data: monthlyRevenue.slice(0, 7),
+                            borderColor: '#0ea5e9', // Sky 500
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#0ea5e9',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#0ea5e9',
+                            fill: true,
+                            tension: 0.4
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(51, 65, 85, 0.5)', drawBorder: false }, // Slate 700
-                            ticks: { color: '#94a3b8' } // Slate 400
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
                         },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#94a3b8' }
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(51, 65, 85, 0.5)', drawBorder: false }, // Slate 700
+                                ticks: { color: '#94a3b8' } // Slate 400
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
+        } catch (err) {
+            console.error("Error loading dashboard stats:", err);
         }
     }
 
@@ -470,6 +516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Reload tables
                     loadPayments();
                     loadUsers();
+                    loadDashboardStats();
                     
                 } catch (err) {
                     console.error("Update Error:", err);
