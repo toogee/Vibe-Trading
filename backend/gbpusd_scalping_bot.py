@@ -1004,28 +1004,32 @@ def check_closed_trades():
 
                 log.info(f"Supabase updated: trade {trade_id} → {status} ${profit:.2f}")
 
-                # ── Daily limits (1 seule fois par signal) ───────────────────
-                signal_key = trade_id  # Utiliser trade_id (unique) au lieu de open_time
-                if signal_key not in daily.processed_signals:
-                    was_halted = daily.halted
-                    daily.record_trade_result(profit)
                     daily.processed_signals.add(signal_key)
-                    if daily.halted and not was_halted:
-                        telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
+                # ── Daily limits & Notification (Géré par le compte Master) ────
+                master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
+                is_master = (not master_login) or (str(login) == master_login)
 
-                # ── Notification Telegram (1 seule fois par boucle) ──────────
-                if not telegram_sent:
-                    if status == "WIN":
-                        emoji       = "🎯"
-                        status_text = "Take Profit atteint ✅"
-                    else:
-                        emoji       = "❌"
-                        status_text = "Stop Loss atteint 🛑"
-                    reason_label = f" ({close_reason})" if close_reason else ""
-                    telegram_notifier.send_message(
-                        f"{emoji} *{status_text} sur GBP/USD !*{reason_label}"
-                    )
-                    telegram_sent = True
+                if is_master:
+                    signal_key = open_time_str[:16]  # Group by minute to identify the signal batch
+                    if signal_key not in daily.processed_signals:
+                        # Update Daily limits
+                        was_halted = daily.halted
+                        daily.record_trade_result(profit)
+                        daily.processed_signals.add(signal_key)
+                        if daily.halted and not was_halted:
+                            telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
+
+                        # ── Notification Telegram ──────────
+                        if status == "WIN":
+                            emoji       = "🎯"
+                            status_text = "Take Profit atteint ✅"
+                        else:
+                            emoji       = "❌"
+                            status_text = "Stop Loss atteint 🛑"
+                        reason_label = f" ({close_reason})" if close_reason else ""
+                        telegram_notifier.send_message(
+                            f"{emoji} *{status_text} sur GBP/USD !*{reason_label}"
+                        )
 
             except Exception as e:
                 log.error(f"Error checking trade closure for user {user_id}: {e}")
