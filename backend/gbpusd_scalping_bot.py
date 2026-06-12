@@ -1004,7 +1004,6 @@ def check_closed_trades():
 
                 log.info(f"Supabase updated: trade {trade_id} → {status} ${profit:.2f}")
 
-                    daily.processed_signals.add(signal_key)
                 # ── Daily limits & Notification (Géré par le compte Master) ────
                 master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
                 is_master = (not master_login) or (str(login) == master_login)
