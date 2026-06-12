@@ -107,7 +107,9 @@ class DailyState:
         self.win_count    = 0
         self.daily_profit = 0.0
         self.halted       = False
+        self.halt_reason  = ""
         self.processed_signals = set()
+        self.notified_news = set()
         log.info("Daily state reset.")
 
     def check_date_rollover(self):
@@ -118,12 +120,16 @@ class DailyState:
     def can_trade(self) -> bool:
         self.check_date_rollover()
         if self.halted:
-            log.info("Trading halted for today (2 losses reached).")
+            log.info(f"Trading halted for today ({self.halt_reason}).")
             return False
         if self.win_count >= 1 or self.daily_profit > 0:
+            self.halted = True
+            self.halt_reason = f"{self.win_count} Take Profit atteint ✅"
             log.info("Daily Profit Target reached (One and Done). Trading halted for today.")
             return False
         if self.trade_count >= MAX_DAILY_TRADES:
+            self.halted = True
+            self.halt_reason = f"Limite de {MAX_DAILY_TRADES} trades atteinte"
             log.info("Max daily trades reached.")
             return False
         return True
@@ -136,12 +142,14 @@ class DailyState:
         self.daily_profit += profit
         if profit > 0:
             self.win_count += 1
+            self.halt_reason = f"{self.win_count} Take Profit atteint ✅"
             log.info(f"Win recorded! Daily Profit is now > 0. (One and Done triggered).")
         if profit < 0:
             self.loss_count += 1
             log.info(f"Loss recorded. Daily losses: {self.loss_count}/{MAX_DAILY_LOSSES}")
             if self.loss_count >= MAX_DAILY_LOSSES:
                 self.halted = True
+                self.halt_reason = f"{self.loss_count} pertes consécutives"
                 log.warning("2 losses hit — trading halted for the rest of the day.")
 
 daily = DailyState()
@@ -884,7 +892,7 @@ def check_closed_trades():
     """
     Check if open trades in Supabase are still open in MT5.
     If closed, update their status, profit, and close_time.
-    Also sends Telegram notifications for wins/losses.
+    Telegram notifications and daily limits are based ONLY on the Master Account.
     """
     try:
         from db import supabase
@@ -894,7 +902,7 @@ def check_closed_trades():
         if not open_trades:
             return
 
-        telegram_sent = False
+        master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
 
         for trade in open_trades:
             user_id = trade["user_id"]
@@ -927,60 +935,95 @@ def check_closed_trades():
 
                 # Position is closed! Find the exit deal in history
                 from_date = datetime.now(pytz.utc) - timedelta(days=2)
-                to_date = datetime.now(pytz.utc) + timedelta(days=2) # Fix Timezone offset issue
+                to_date = datetime.now(pytz.utc) + timedelta(days=2)
 
                 deals = mt5.history_deals_get(from_date, to_date)
                 profit = 0.0
                 found_deal = False
                 deal_time_str = datetime.now(pytz.utc).isoformat()
+                close_reason = None
 
                 if deals:
-                    # Sort deals by time descending to get the latest close deal
-                    sorted_deals = sorted(deals, key=lambda d: d.time, reverse=True)
-                    for deal in sorted_deals:
-                        # We only want the EXIT deal (mt5.DEAL_ENTRY_OUT = 1)
-                        if deal.magic == MAGIC_NUMBER and deal.entry == mt5.DEAL_ENTRY_OUT:
-                            profit = deal.profit
-                            deal_time_str = datetime.fromtimestamp(deal.time, pytz.utc).isoformat()
-                            found_deal = True
-                            break
+                    # Get all bot deals, sorted most recent first
+                    bot_deals = [d for d in deals if d.magic == MAGIC_NUMBER]
+                    bot_deals.sort(key=lambda d: d.time, reverse=True)
+
+                    for deal in bot_deals:
+                        # Skip entry deals (DEAL_ENTRY_IN = opening)
+                        if deal.entry == mt5.DEAL_ENTRY_IN:
+                            continue
+
+                        # This is an exit deal
+                        profit = deal.profit
+                        deal_time_str = datetime.fromtimestamp(deal.time, pytz.utc).isoformat()
+                        found_deal = True
+
+                        # Determine close reason via deal.reason (most reliable)
+                        if deal.reason == mt5.DEAL_REASON_TP:
+                            close_reason = "TP"
+                        elif deal.reason == mt5.DEAL_REASON_SL:
+                            close_reason = "SL"
+                        elif deal.profit < 0:
+                            close_reason = "SL"
+                        elif deal.profit > 0:
+                            close_reason = "TP"
+                        else:
+                            close_reason = "MANUAL"
+                        break
 
                 if not found_deal:
                     log.warning(f"Position closed but no exit deal found for user {user_id} in history. Skipping update.")
                     continue
 
-                # Update Supabase for this specific trade ID
-                status = "WIN" if profit > 0 else "LOSS"
+                # ── Final status ──────────────────────────────────────────────
+                if close_reason == "TP":
+                    status = "WIN"
+                elif close_reason == "SL":
+                    status = "LOSS"
+                else:
+                    status = "WIN" if profit > 0 else "LOSS"
+
+                # ── Update Supabase ──────────────────────────────────────────
                 supabase.table("trades").update({
                     "status": status,
                     "profit": round(profit, 2),
                     "close_time": deal_time_str
                 }).eq("id", trade_id).execute()
 
-                log.info(f"Supabase updated: trade {trade_id} for user {user_id} → {status} ${profit:.2f}")
+                log.info(f"Supabase updated: trade {trade_id} for user {user_id} → {status} ${profit:.2f} (Reason: {close_reason})")
 
-                # Update daily performance limits only once per signal group
-                signal_key = open_time_str[:16]  # e.g., "2026-06-03T14:18"
-                if signal_key not in daily.processed_signals:
-                    daily.record_trade_result(profit)
-                    daily.processed_signals.add(signal_key)
+                # ── Daily limits & Telegram (Master Account ONLY) ─────────────
+                is_master = (not master_login) or (str(login) == master_login)
 
-                # Send Telegram notification (only once per loop run)
-                if not telegram_sent:
-                    emoji = "🎯" if profit > 0 else "❌"
-                    status_text = "Take Profit atteint" if profit > 0 else "Stop Loss atteint"
-                    profit_sign = "+" if profit > 0 else ""
-                    telegram_notifier.send_message(
-                        f"{emoji} *{status_text} sur GBP/USD !*\n"
-                        f"Bilan: `{profit_sign}${profit:.2f}`"
-                    )
-                    telegram_sent = True
+                if is_master:
+                    signal_key = open_time_str[:16]
+                    if signal_key not in daily.processed_signals:
+                        # Update daily limits
+                        daily.record_trade_result(profit)
+                        daily.processed_signals.add(signal_key)
+
+                        # Check if daily halt was triggered
+                        if daily.halted:
+                            telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason if hasattr(daily, 'halt_reason') else 'Limite atteinte'}")
+
+                        # ── Telegram notification ──────────
+                        if status == "WIN":
+                            emoji = "🎯"
+                            status_text = "Take Profit atteint ✅"
+                        else:
+                            emoji = "❌"
+                            status_text = "Stop Loss atteint 🛑"
+                        reason_label = f" ({close_reason})" if close_reason else ""
+                        telegram_notifier.send_message(
+                            f"{emoji} *{status_text} sur GBP/USD !*{reason_label}"
+                        )
 
             except Exception as e:
                 log.error(f"Error checking trade closure for user {user_id}: {e}")
 
     except Exception as e:
         log.error(f"Error in check_closed_trades: {e}")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BREAK-EVEN MANAGEMENT
