@@ -928,38 +928,60 @@ def check_closed_trades():
                     # Trade is still open, do nothing
                     continue
 
-                # Position is closed! Find the exit deal in history
-                from_date = datetime.now(pytz.utc) - timedelta(hours=24)
-                to_date   = datetime.now(pytz.utc) + timedelta(minutes=5)
+                # Parse open time from Supabase
+                trade_open_time = datetime.fromisoformat(open_time_str.replace("Z", "+00:00"))
 
-                deals = mt5.history_deals_get(from_date, to_date)
+                # Determine broker timezone offset dynamically
+                offset_seconds = 0
+                tick = mt5.symbol_info_tick(SYMBOL)
+                if tick:
+                    utc_now = datetime.now(pytz.utc).timestamp()
+                    offset_seconds = round((tick.time - utc_now) / 1800) * 1800
+
+                # Query deals in a wide window around trade open time
+                from_date_utc = trade_open_time - timedelta(days=2)
+                to_date_utc = datetime.now(pytz.utc) + timedelta(days=2)
+
+                from_date_server = datetime.fromtimestamp(from_date_utc.timestamp() + offset_seconds)
+                to_date_server = datetime.fromtimestamp(to_date_utc.timestamp() + offset_seconds)
+
+                deals = mt5.history_deals_get(from_date_server, to_date_server)
                 profit        = 0.0
                 found_deal    = False
                 deal_time_str = datetime.now(pytz.utc).isoformat()
                 close_reason  = None
 
                 if deals:
-                    # ── Récupérer TOUS les deals du bot, triés du plus récent ──
-                    bot_deals = [d for d in deals if d.magic == MAGIC_NUMBER]
-                    bot_deals.sort(key=lambda d: d.time, reverse=True)
-
-                    log.info(f"MT5 deals trouvés pour ce bot: {len(bot_deals)}")
-
-                    for deal in bot_deals:
-                        # Log chaque deal pour diagnostic
+                    # Filter exit deals matching our magic number and closed after trade_open_time
+                    candidate_deals = []
+                    for deal in deals:
+                        if deal.magic != MAGIC_NUMBER:
+                            continue
+                        # Log every bot deal for diagnostics
                         log.info(
                             f"  Deal: ticket={deal.ticket} | entry={deal.entry} | "
                             f"reason={deal.reason} | profit={deal.profit:.2f} | "
                             f"type={deal.type}"
                         )
-
-                        # DEAL_ENTRY_IN = ouverture (profit=0) → ignorer
                         if deal.entry == mt5.DEAL_ENTRY_IN:
                             continue
+                        
+                        # Convert deal time (server time) to UTC
+                        deal_utc_timestamp = deal.time - offset_seconds
+                        deal_time_utc = datetime.fromtimestamp(deal_utc_timestamp, pytz.utc)
+                        
+                        if deal_time_utc > trade_open_time:
+                            candidate_deals.append((deal, deal_time_utc))
 
-                        # C'est un deal de sortie (ENTRY_OUT ou autre)
+                    log.info(f"MT5 deals trouvés pour ce bot après open_time: {len(candidate_deals)}")
+
+                    if candidate_deals:
+                        # Sort by time ascending to get the oldest exit deal since open_time
+                        candidate_deals.sort(key=lambda x: x[1])
+                        deal, deal_time_utc = candidate_deals[0]
+
                         profit        = deal.profit
-                        deal_time_str = datetime.fromtimestamp(deal.time, pytz.utc).isoformat()
+                        deal_time_str = deal_time_utc.isoformat()
                         found_deal    = True
 
                         # Déterminer raison via deal.reason (le plus fiable)
@@ -968,7 +990,6 @@ def check_closed_trades():
                         elif deal.reason == mt5.DEAL_REASON_SL:
                             close_reason = "SL"
                         elif deal.profit < 0:
-                            # Profit négatif → c'est forcément un SL ou perte
                             close_reason = "SL"
                             log.info(f"Raison inconnue mais profit négatif → forcé SL")
                         elif deal.profit > 0:
@@ -976,10 +997,10 @@ def check_closed_trades():
                             log.info(f"Raison inconnue mais profit positif → forcé TP")
                         else:
                             close_reason = "MANUAL"
-                        break
 
-                    if not found_deal:
-                        log.warning(f"Aucun deal de fermeture trouvé pour trade {trade_id}. Vérifier MT5 history.")
+                if not found_deal:
+                    log.warning(f"Aucun deal de fermeture trouvé pour trade {trade_id}. Vérifier MT5 history. Skipping update.")
+                    continue
 
                 # ── Statut final ──────────────────────────────────────────────
                 if close_reason == "TP":

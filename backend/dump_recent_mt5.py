@@ -28,7 +28,7 @@ if not mt5.login(login=login, password=pwd, server=server):
     sys.exit(1)
 
 from_dt = datetime.now(pytz.utc) - timedelta(days=5)
-to_dt = datetime.now(pytz.utc) + timedelta(minutes=5)
+to_dt = datetime.now(pytz.utc) + timedelta(hours=24)
 deals = mt5.history_deals_get(from_dt, to_dt)
 
 print("=== DEALS RECENTS SANS FILTRE (5 jours) ===")
