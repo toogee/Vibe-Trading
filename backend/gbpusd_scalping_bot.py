@@ -45,8 +45,17 @@ RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
 ATR_SL_MULTIPLIER = 1.5             # SL is 1.5 * ATR
 RISK_REWARD_RATIO = 2.2             # TP is 2.2 * SL (risk/reward ratio)
 PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
-MAX_DAILY_TRADES= 3
-MAX_DAILY_LOSSES= 2
+# Daily lock profit / stop trading rules
+DAILY_PROFIT_TARGET_R   = 3.0       # Stop if daily profit >= 3R (e.g. +3R)
+DAILY_PROFIT_TARGET_PCT = None      # Stop if daily profit >= X% of balance
+DAILY_PROFIT_TARGET_USD = None      # Stop if daily profit >= X USD
+
+DAILY_LOSS_LIMIT_R      = 2.0       # Stop if daily loss <= -2R
+DAILY_LOSS_LIMIT_PCT    = None      # Stop if daily loss <= -X% of balance
+DAILY_LOSS_LIMIT_USD    = None      # Stop if daily loss <= -X USD
+
+MAX_DAILY_TRADES        = None      # Disabled (not limited by count of trades)
+MAX_DAILY_LOSSES        = None      # Disabled (using R-multiple / percent / USD limits instead)
 
 MASTER_ACCOUNT_LOGIN = os.getenv("MASTER_ACCOUNT_LOGIN", "")
 
@@ -106,6 +115,9 @@ class DailyState:
         self.date         = datetime.now(pytz.timezone(TIMEZONE)).date()
         self.trade_count  = 0
         self.loss_count   = 0
+        self.win_count    = 0
+        self.daily_profit = 0.0
+        self.daily_profit_r = 0.0
         self.halted       = False
         self.halt_reason  = ""
         self.processed_signals = set()
@@ -120,29 +132,84 @@ class DailyState:
     def can_trade(self) -> bool:
         self.check_date_rollover()
         if self.halted:
-            log.info("Trading halted for today (2 losses reached).")
-            return False
-        if self.trade_count >= MAX_DAILY_TRADES:
-            log.info("Max daily trades reached.")
+            log.info(f"Trading halted for today ({self.halt_reason}).")
             return False
         return True
 
     def record_trade_open(self):
         self.trade_count += 1
-        log.info(f"Trade opened. Daily count: {self.trade_count}/{MAX_DAILY_TRADES}")
+        limit_str = str(MAX_DAILY_TRADES) if MAX_DAILY_TRADES is not None else "∞"
+        log.info(f"Trade opened. Daily count: {self.trade_count}/{limit_str}")
 
-    def record_trade_result(self, profit: float):
-        if profit < 0:
-            self.loss_count += 1
-            log.info(f"Loss recorded. Daily losses: {self.loss_count}/{MAX_DAILY_LOSSES}")
-            if self.loss_count >= MAX_DAILY_LOSSES:
-                self.halted = True
-                self.halt_reason = "2 Stop Loss atteints 🛑"
-                log.warning("2 losses hit — trading halted for the rest of the day.")
+    def record_trade_result(self, profit: float, balance: float):
+        self.daily_profit += profit
+        
+        # Calculate R-multiple of this trade
+        risk_per_trade = balance * (RISK_PERCENT / 100.0)
+        trade_r = profit / risk_per_trade if risk_per_trade > 0 else 0.0
+        self.daily_profit_r += trade_r
+
+        if profit > 0:
+            self.win_count += 1
         else:
+            self.loss_count += 1
+
+        log.info(f"Trade closed. Profit: ${profit:.2f} ({trade_r:.2f}R). Win count: {self.win_count}, Loss count: {self.loss_count}. Daily totals: ${self.daily_profit:.2f} ({self.daily_profit_r:.2f}R).")
+
+        # ── Check Profit Targets ──
+        if DAILY_PROFIT_TARGET_R is not None and self.daily_profit_r >= DAILY_PROFIT_TARGET_R:
             self.halted = True
-            self.halt_reason = "1 Take Profit atteint ✅"
-            log.info("1 TP hit — trading halted for the rest of the day.")
+            self.halt_reason = f"Objectif de profit atteint ({self.daily_profit_r:.2f}R >= {DAILY_PROFIT_TARGET_R}R) ✅"
+            log.info(f"Daily Profit Target reached ({self.daily_profit_r:.2f}R). Trading halted.")
+            return
+
+        if DAILY_PROFIT_TARGET_PCT is not None and balance > 0:
+            profit_pct = (self.daily_profit / balance) * 100.0
+            if profit_pct >= DAILY_PROFIT_TARGET_PCT:
+                self.halted = True
+                self.halt_reason = f"Objectif de profit atteint ({profit_pct:.2f}% >= {DAILY_PROFIT_TARGET_PCT}%) ✅"
+                log.info(f"Daily Profit Target reached ({profit_pct:.2f}%). Trading halted.")
+                return
+
+        if DAILY_PROFIT_TARGET_USD is not None and self.daily_profit >= DAILY_PROFIT_TARGET_USD:
+            self.halted = True
+            self.halt_reason = f"Objectif de profit atteint (${self.daily_profit:.2f} >= ${DAILY_PROFIT_TARGET_USD}) ✅"
+            log.info(f"Daily Profit Target reached (${self.daily_profit:.2f} USD). Trading halted.")
+            return
+
+        # ── Check Loss Limits ──
+        if DAILY_LOSS_LIMIT_R is not None and self.daily_profit_r <= -DAILY_LOSS_LIMIT_R:
+            self.halted = True
+            self.halt_reason = f"Limite de perte atteinte ({self.daily_profit_r:.2f}R <= -{DAILY_LOSS_LIMIT_R}R) 🛑"
+            log.warning(f"Daily Loss Limit reached ({self.daily_profit_r:.2f}R). Trading halted.")
+            return
+
+        if DAILY_LOSS_LIMIT_PCT is not None and balance > 0:
+            loss_pct = (self.daily_profit / balance) * 100.0
+            if loss_pct <= -DAILY_LOSS_LIMIT_PCT:
+                self.halted = True
+                self.halt_reason = f"Limite de perte atteinte ({loss_pct:.2f}% <= -{DAILY_LOSS_LIMIT_PCT}%) 🛑"
+                log.warning(f"Daily Loss Limit reached ({loss_pct:.2f}%). Trading halted.")
+                return
+
+        if DAILY_LOSS_LIMIT_USD is not None and self.daily_profit <= -DAILY_LOSS_LIMIT_USD:
+            self.halted = True
+            self.halt_reason = f"Limite de perte atteinte (${self.daily_profit:.2f} <= -${DAILY_LOSS_LIMIT_USD}) 🛑"
+            log.warning(f"Daily Loss Limit reached (${self.daily_profit:.2f} USD). Trading halted.")
+            return
+
+        # ── Check Count Limits (if enabled) ──
+        if MAX_DAILY_TRADES is not None and self.trade_count >= MAX_DAILY_TRADES:
+            self.halted = True
+            self.halt_reason = f"Limite de {MAX_DAILY_TRADES} trades atteinte 🛑"
+            log.info("Max daily trades reached. Trading halted.")
+            return
+
+        if MAX_DAILY_LOSSES is not None and self.loss_count >= MAX_DAILY_LOSSES:
+            self.halted = True
+            self.halt_reason = f"Limite de {MAX_DAILY_LOSSES} pertes atteinte 🛑"
+            log.warning(f"Max daily losses reached. Trading halted.")
+            return
 
 daily = DailyState()
 
@@ -1034,7 +1101,9 @@ def check_closed_trades():
                     if signal_key not in daily.processed_signals:
                         # Update Daily limits
                         was_halted = daily.halted
-                        daily.record_trade_result(profit)
+                        acc_info = mt5.account_info()
+                        master_balance = acc_info.balance if acc_info is not None else 0.0
+                        daily.record_trade_result(profit, master_balance)
                         daily.processed_signals.add(signal_key)
                         if daily.halted and not was_halted:
                             telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
