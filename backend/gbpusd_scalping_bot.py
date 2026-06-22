@@ -1345,7 +1345,8 @@ def sync_all_balances():
 
 def evaluate_signal() -> Tuple[Optional[str], float]:
     """
-    Full signal evaluation pipeline using direct trigger logic:
+    Full signal evaluation pipeline combining scoring system (6.5/10)
+    and direct trigger logic:
     - Biais directionnel via VWAP
     - Déclencheur (trigger) via croisement StochRSI
     - Zone de support/résistance requise (Supply/Demand)
@@ -1387,28 +1388,70 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     # Supply / Demand zones
     demand_zones, supply_zones = detect_zones(df.iloc[:-1])  # exclude current bar
 
-    direction = None
+    # ── 4. Calculate 10-Point Score ──────────────────────────────────────────
+    buy_score = 0.0
+    sell_score = 0.0
 
-    # ── 4. Direct Trigger Evaluation ─────────────────────────────────────────
-    # 4.1 Buy Setup: VWAP bias (price > vwap) + StochRSI cross + Demand Zone + Trend verification (SMA50 & EMA200)
-    stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 80
+    # 4.1 Trend Alignment (VWAP, EMA200, SMA50)
+    if price > vwap: buy_score += 1.0
+    if price < vwap: sell_score += 1.0
+
+    if price > ema200: buy_score += 1.0
+    if price < ema200: sell_score += 1.0
+
+    if price > sma50: buy_score += 1.0
+    if price < sma50: sell_score += 1.0
+
+    # 4.2 M1 Momentum
+    if m1_momentum_aligned("buy"): buy_score += 1.0
+    if m1_momentum_aligned("sell"): sell_score += 1.0
+
+    # 4.3 Price Action
+    if is_engulfing(prev_closed, last_closed, "buy") or is_rejection_candle(last_closed, "buy"):
+        buy_score += 1.0
+    if is_engulfing(prev_closed, last_closed, "sell") or is_rejection_candle(last_closed, "sell"):
+        sell_score += 1.0
+
+    # 4.4 Supply/Demand
     in_demand = price_in_zone(price, demand_zones)
-    trend_buy_ok = price > sma50 and price > ema200
-    
-    if price > vwap and stoch_buy_trigger and in_demand and trend_buy_ok:
-        direction = "buy"
-        log.info(f"🎯 DIRECT TRIGGER BUY SETUP: price={price:.5f} > vwap={vwap:.5f} | StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f}) | Demand Zone | Trend OK")
-
-    # 4.2 Sell Setup: VWAP bias (price < vwap) + StochRSI cross + Supply Zone + Trend verification (SMA50 & EMA200)
-    stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 20
     in_supply = price_in_zone(price, supply_zones)
-    trend_sell_ok = price < sma50 and price < ema200
-    
-    if price < vwap and stoch_sell_trigger and in_supply and trend_sell_ok:
-        direction = "sell"
-        log.info(f"🎯 DIRECT TRIGGER SELL SETUP: price={price:.5f} < vwap={vwap:.5f} | StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f}) | Supply Zone | Trend OK")
+    if in_demand: buy_score += 1.5
+    if in_supply: sell_score += 1.5
 
-    # ── 5. IA Sentiment Filter validation ────────────────────────────────────
+    # 4.5 Break & Retest
+    if detect_break_and_retest(df.iloc[:-1], "buy", demand_zones, sma50, ema200):
+        buy_score += 1.5
+    if detect_break_and_retest(df.iloc[:-1], "sell", supply_zones, sma50, ema200):
+        sell_score += 1.5
+
+    # 4.6 StochRSI Trigger
+    stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 80
+    stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 20
+    
+    # Strict StochRSI threshold for score-based system
+    if stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 20: buy_score += 2.0
+    if stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 80: sell_score += 2.0
+
+    log.debug(f"Current Scores - BUY: {buy_score}/10 | SELL: {sell_score}/10")
+
+    # ── 5. Direct Trigger Evaluation ─────────────────────────────────────────
+    # Buy Setup: VWAP bias (price > vwap) + StochRSI cross + Demand Zone + Trend verification (SMA50 & EMA200)
+    direct_buy = price > vwap and stoch_buy_trigger and in_demand and (price > sma50 and price > ema200)
+
+    # Sell Setup: VWAP bias (price < vwap) + StochRSI cross + Supply Zone + Trend verification (SMA50 & EMA200)
+    direct_sell = price < vwap and stoch_sell_trigger and in_supply and (price < sma50 and price < ema200)
+
+    direction = None
+    if (buy_score >= 6.5 and buy_score > sell_score) or direct_buy:
+        direction = "buy"
+        trigger_type = "DIRECT TRIGGER" if direct_buy else f"SCORE SYSTEM ({buy_score}/10)"
+        log.info(f"🎯 BUY SETUP: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
+    elif (sell_score >= 6.5 and sell_score > buy_score) or direct_sell:
+        direction = "sell"
+        trigger_type = "DIRECT TRIGGER" if direct_sell else f"SCORE SYSTEM ({sell_score}/10)"
+        log.info(f"🎯 SELL SETUP: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
+
+    # ── 6. IA Sentiment Filter validation ────────────────────────────────────
     if direction in ("buy", "sell"):
         if sentiment_filter.enabled:
             log.info("Analyzing market sentiment with Gemini...")
