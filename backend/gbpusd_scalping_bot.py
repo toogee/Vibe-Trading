@@ -43,7 +43,7 @@ SYMBOL          = "GBPUSD"
 MAGIC_NUMBER    = 20240601          # Unique ID for this bot's trades
 RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
 ATR_SL_MULTIPLIER = 1.5             # SL is 1.5 * ATR
-RISK_REWARD_RATIO = 2.2             # TP is 2.2 * SL (risk/reward ratio)
+RISK_REWARD_RATIO = 1.5             # TP is 1.5 * SL (risk/reward ratio)
 PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
 # Daily lock profit / stop trading rules
 DAILY_PROFIT_TARGET_R   = 3.0       # Stop if daily profit >= 3R (e.g. +3R)
@@ -90,8 +90,8 @@ SWING_LOOKBACK = 5
 ZONE_TOLERANCE_PIPS = 5
 
 # Consolidation / low-volatility filter
-MIN_CANDLE_BODY_PIPS = 1.0   # RELAXÉ: 1.0 pip (était 2.0) — plus permissif
-ADR_CONSOLIDATION_RATIO = 0.15  # RELAXÉ: 15% ADR (était 30%) — filtre moins agressif
+MIN_CANDLE_BODY_PIPS = 2.0   # Minimum candle body to consider non-weak
+ADR_CONSOLIDATION_RATIO = 0.3  # If candle range < 30% of ADR → consolidating
 
 # Trend detection lookback in M1 bars
 TREND_LOOKBACK = 20
@@ -520,6 +520,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     k, d = calculate_stoch_rsi(df, period=14)
     df["stoch_k"] = k
     df["stoch_d"] = d
+    df["sma50"] = df["close"].rolling(window=50).mean()
+    df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -562,10 +564,8 @@ def detect_trend(df: pd.DataFrame) -> str:
 def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
     """
     Returns True if market is ranging / low-volatility on recent bars.
-    RELAXÉ: Les DEUX conditions doivent être vraies (AND au lieu de OR)
-    pour éviter de filtrer des marchés actifs par erreur.
     Criteria:
-      1. Average candle body < MIN_CANDLE_BODY_PIPS  AND
+      1. Average candle body < MIN_CANDLE_BODY_PIPS
       2. Average range < ADR_CONSOLIDATION_RATIO * 20-bar ADR
     """
     recent = df.iloc[-lookback:]
@@ -576,11 +576,9 @@ def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
     body_weak  = avg_body  < pip(MIN_CANDLE_BODY_PIPS)
     range_low  = avg_range < (adr * ADR_CONSOLIDATION_RATIO)
 
-    # RELAXÉ: AND au lieu de OR — les deux critères doivent être vrais
-    if body_weak and range_low:
-        log.debug(f"Consolidation détectée (strict): avg_body={avg_body:.5f}, avg_range={avg_range:.5f}, adr={adr:.5f}")
+    if body_weak or range_low:
+        log.debug(f"Consolidation detected: avg_body={avg_body:.5f}, avg_range={avg_range:.5f}, adr={adr:.5f}")
         return True
-    log.debug(f"Marché actif: avg_body={avg_body:.5f} (seuil={pip(MIN_CANDLE_BODY_PIPS):.5f}), avg_range={avg_range:.5f}, adr={adr:.5f}")
     return False
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1347,9 +1345,11 @@ def sync_all_balances():
 
 def evaluate_signal() -> Tuple[Optional[str], float]:
     """
-    Full signal evaluation pipeline using institutional indicators:
+    Full signal evaluation pipeline using direct trigger logic:
     - Biais directionnel via VWAP
-    - Déclencheur (trigger) via croisement StochRSI dans les zones Supply/Demand
+    - Déclencheur (trigger) via croisement StochRSI
+    - Zone de support/résistance requise (Supply/Demand)
+    - Validation de la tendance via SMA50 et EMA200
     - IA Sentiment validation via Gemini
     Returns: (direction, atr_value) -> ('buy'/'sell'/None, float)
     """
@@ -1362,7 +1362,7 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     df_m1 = add_indicators(df_m1_raw)
 
     # Use only rows where indicators are valid
-    df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d"]).copy()
+    df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d", "sma50", "ema200"]).copy()
     if len(df) < 20:
         return None, 0.0
 
@@ -1377,66 +1377,38 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     price  = last_closed["close"]
     vwap   = last_closed["vwap"]
     atr    = last_closed["atr"]
+    sma50  = last_closed["sma50"]
+    ema200 = last_closed["ema200"]
+    stoch_k = last_closed["stoch_k"]
+    stoch_d = last_closed["stoch_d"]
+    prev_k = prev_closed["stoch_k"]
+    prev_d = prev_closed["stoch_d"]
 
-    # ── 4. Determine VWAP Bias ───────────────────────────────────────────────
-    if price > vwap:
-        bias = "buy"
-    elif price < vwap:
-        bias = "sell"
-    else:
-        log.debug(f"Price on VWAP. Neutral bias.")
-        return None, 0.0
-
-    # ── 5. Supply / Demand zones ─────────────────────────────────────────────
+    # Supply / Demand zones
     demand_zones, supply_zones = detect_zones(df.iloc[:-1])  # exclude current bar
 
-    # ── 6. Direction-specific checks ─────────────────────────────────────────
     direction = None
 
-    if bias == "buy":
-        in_demand = price_in_zone(price, demand_zones)
-        stoch_k = last_closed["stoch_k"]
-        stoch_d = last_closed["stoch_d"]
-        prev_k = prev_closed["stoch_k"]
-        prev_d = prev_closed["stoch_d"]
+    # ── 4. Direct Trigger Evaluation ─────────────────────────────────────────
+    # 4.1 Buy Setup: VWAP bias (price > vwap) + StochRSI cross + Demand Zone + Trend verification (SMA50 & EMA200)
+    stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 80
+    in_demand = price_in_zone(price, demand_zones)
+    trend_buy_ok = price > sma50 and price > ema200
+    
+    if price > vwap and stoch_buy_trigger and in_demand and trend_buy_ok:
+        direction = "buy"
+        log.info(f"🎯 DIRECT TRIGGER BUY SETUP: price={price:.5f} > vwap={vwap:.5f} | StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f}) | Demand Zone | Trend OK")
 
-        # RELAXÉ: Golden cross sous 80 (était 30) — plus de signaux capturés
-        # Niveau prioritaire si < 50 (oversold zone), acceptable jusqu'à 80
-        stoch_buy_trigger = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 80
-        stoch_buy_strong  = stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 40  # Bonus: signal fort
+    # 4.2 Sell Setup: VWAP bias (price < vwap) + StochRSI cross + Supply Zone + Trend verification (SMA50 & EMA200)
+    stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 20
+    in_supply = price_in_zone(price, supply_zones)
+    trend_sell_ok = price < sma50 and price < ema200
+    
+    if price < vwap and stoch_sell_trigger and in_supply and trend_sell_ok:
+        direction = "sell"
+        log.info(f"🎯 DIRECT TRIGGER SELL SETUP: price={price:.5f} < vwap={vwap:.5f} | StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f}) | Supply Zone | Trend OK")
 
-        if stoch_buy_trigger:
-            if in_demand:
-                log.info(f"🎯 STRONG BUY SETUP: Demand Zone + StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f})")
-            else:
-                log.info(f"📈 BUY SETUP (VWAP + Momentum): StochRSI cross ({stoch_k:.1f} > {stoch_d:.1f}) — pas de zone requise")
-            direction = "buy"
-        else:
-            log.debug(f"[BUY] Pas de setup: in_demand={in_demand}, stoch_k={stoch_k:.1f}, stoch_d={stoch_d:.1f}, prev_k={prev_k:.1f}")
-            return None, 0.0
-
-    elif bias == "sell":
-        in_supply = price_in_zone(price, supply_zones)
-        stoch_k = last_closed["stoch_k"]
-        stoch_d = last_closed["stoch_d"]
-        prev_k = prev_closed["stoch_k"]
-        prev_d = prev_closed["stoch_d"]
-
-        # RELAXÉ: Death cross au-dessus de 20 (était 70) — plus de signaux capturés
-        stoch_sell_trigger = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 20
-        stoch_sell_strong  = stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 60  # Bonus: signal fort
-
-        if stoch_sell_trigger:
-            if in_supply:
-                log.info(f"🎯 STRONG SELL SETUP: Supply Zone + StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f})")
-            else:
-                log.info(f"📉 SELL SETUP (VWAP + Momentum): StochRSI cross ({stoch_k:.1f} < {stoch_d:.1f}) — pas de zone requise")
-            direction = "sell"
-        else:
-            log.debug(f"[SELL] Pas de setup: in_supply={in_supply}, stoch_k={stoch_k:.1f}, stoch_d={stoch_d:.1f}, prev_k={prev_k:.1f}")
-            return None, 0.0
-
-    # ── 7. IA Sentiment Filter validation ────────────────────────────────────
+    # ── 5. IA Sentiment Filter validation ────────────────────────────────────
     if direction in ("buy", "sell"):
         if sentiment_filter.enabled:
             log.info("Analyzing market sentiment with Gemini...")
