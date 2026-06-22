@@ -57,6 +57,16 @@ DAILY_LOSS_LIMIT_USD    = None      # Stop if daily loss <= -X USD
 MAX_DAILY_TRADES        = None      # Disabled (not limited by count of trades)
 MAX_DAILY_LOSSES        = None      # Disabled (using R-multiple / percent / USD limits instead)
 
+# Trailing Stop Loss Configuration
+TRAILING_SL_ENABLED = True
+# Tiers de trailing progressifs : (Seuil de profit en ratio de TP, Ratio de profit sécurisé)
+# Par exemple : (0.40, 0.05) veut dire : à 40% du TP atteint, déplacer le SL à l'entrée + 5% du TP
+TRAIL_TIERS = [
+    (0.40, 0.05),   # Seuil 1 : À >= 40% du TP, déplacer le SL à +5% du TP (BE + couverture de spread)
+    (0.70, 0.35),   # Seuil 2 : À >= 70% du TP, déplacer le SL à +35% du TP (sécurise 35% de profit)
+    (0.90, 0.65)    # Seuil 3 : À >= 90% du TP, déplacer le SL à +65% du TP (sécurise 65% de profit)
+]
+
 # Session: 06:00–17:00 London time (UTC+1 BST / UTC+0 GMT)
 SESSION_START_HOUR = 6
 SESSION_END_HOUR   = 17
@@ -1107,13 +1117,27 @@ def check_closed_trades():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BREAK-EVEN MANAGEMENT
+# TRAILING STOP MANAGEMENT
 # ─────────────────────────────────────────────────────────────────────────────
+
+def get_progressive_trail_lock_ratio(profit_ratio: float) -> Optional[float]:
+    """
+    Returns the target lock ratio (percentage of TP to lock) based on current profit ratio.
+    Returns None if trailing stop is not yet triggered.
+    """
+    if not TRAILING_SL_ENABLED:
+        return None
+        
+    selected_lock_ratio = None
+    for threshold, lock_ratio in TRAIL_TIERS:
+        if profit_ratio >= threshold:
+            selected_lock_ratio = lock_ratio
+    return selected_lock_ratio
 
 def manage_open_trades_breakeven():
     """
-    Checks if any open positions are > +6 pips in profit.
-    If so, moves the Stop-Loss to the entry price (Break-Even) to secure capital.
+    Checks if any open positions qualify for trailing stop updates.
+    Updates the Stop-Loss progressively based on the current profit ratio.
     """
     active_users = get_active_users()
     if not active_users: return
@@ -1138,41 +1162,66 @@ def manage_open_trades_breakeven():
                 if pos.magic != MAGIC_NUMBER:
                     continue
                 
-                # Check for BUY
+                # Calculate TP distance
+                tp_pips = 0.0
+                if pos.tp > 0:
+                    tp_pips = abs(pos.price_open - pos.tp) / PIP_VALUE
+                else:
+                    # Fallback using SL and Risk-Reward ratio
+                    sl_dist = abs(pos.price_open - pos.sl) / PIP_VALUE if pos.sl > 0 else 0.0
+                    tp_pips = sl_dist * RISK_REWARD_RATIO if sl_dist > 0 else 0.0
+
+                if tp_pips <= 0:
+                    continue
+
+                # Calculate profit in pips
                 if pos.type == mt5.ORDER_TYPE_BUY:
                     profit_pips = (pos.price_current - pos.price_open) / PIP_VALUE
-                    distance_to_tp = (pos.tp - pos.price_current) / PIP_VALUE if pos.tp > 0 else 999
-                    # If profit >= 6 pips OR price is within 2 pips of TP, and SL is not already at/above entry
-                    if (profit_pips >= 6.0 or distance_to_tp <= 2.0) and pos.sl < pos.price_open:
-                        request = {
-                            "action": mt5.TRADE_ACTION_SLTP,
-                            "position": pos.ticket,
-                            "symbol": SYMBOL,
-                            "sl": pos.price_open,
-                            "tp": pos.tp
-                        }
-                        res = mt5.order_send(request)
-                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            log.info(f"Break-even applied for user {login} BUY {pos.ticket}")
-                            
-                # Check for SELL
-                elif pos.type == mt5.ORDER_TYPE_SELL:
+                else:
                     profit_pips = (pos.price_open - pos.price_current) / PIP_VALUE
-                    distance_to_tp = (pos.price_current - pos.tp) / PIP_VALUE if pos.tp > 0 else 999
-                    # If profit >= 6 pips OR price is within 2 pips of TP, and SL is not already at/below entry
-                    if (profit_pips >= 6.0 or distance_to_tp <= 2.0) and (pos.sl > pos.price_open or pos.sl == 0.0):
+
+                profit_ratio = profit_pips / tp_pips
+                lock_ratio = get_progressive_trail_lock_ratio(profit_ratio)
+
+                if lock_ratio is not None:
+                    # Target SL
+                    if pos.type == mt5.ORDER_TYPE_BUY:
+                        target_sl = pos.price_open + (lock_ratio * tp_pips * PIP_VALUE)
+                    else:
+                        target_sl = pos.price_open - (lock_ratio * tp_pips * PIP_VALUE)
+
+                    # Check if target SL is better than current SL and respects stop level limits
+                    sym_info = mt5.symbol_info(SYMBOL)
+                    min_stop_pips = (sym_info.trade_stops_level / 10.0) if (sym_info and sym_info.trade_stops_level > 0) else 0.0
+                    min_distance = min_stop_pips * PIP_VALUE
+
+                    should_update = False
+                    if pos.type == mt5.ORDER_TYPE_BUY:
+                        # For BUY, target SL must be higher than current SL and not too close to current price
+                        is_better = target_sl > pos.sl
+                        not_too_close = (pos.price_current - target_sl) >= min_distance
+                        if is_better and not_too_close:
+                            should_update = True
+                    else:
+                        # For SELL, target SL must be lower than current SL (or current SL is 0.0) and not too close to current price
+                        is_better = target_sl < pos.sl or pos.sl == 0.0
+                        not_too_close = (target_sl - pos.price_current) >= min_distance
+                        if is_better and not_too_close:
+                            should_update = True
+
+                    if should_update:
                         request = {
                             "action": mt5.TRADE_ACTION_SLTP,
                             "position": pos.ticket,
                             "symbol": SYMBOL,
-                            "sl": pos.price_open,
+                            "sl": round(target_sl, 5),
                             "tp": pos.tp
                         }
                         res = mt5.order_send(request)
                         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            log.info(f"Break-even applied for user {login} SELL {pos.ticket}")
+                            log.info(f"Trailing SL progressive applied for user {login} {'BUY' if pos.type == mt5.ORDER_TYPE_BUY else 'SELL'} {pos.ticket} (SL: {target_sl:.5f}, Profit: {profit_pips:.1f}p, Ratio: {profit_ratio:.2%})")
         except Exception as e:
-            log.error(f"Error checking break-even for user {user_id}: {e}")
+            log.error(f"Error checking trailing stop for user {user_id}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SYNC BALANCES
