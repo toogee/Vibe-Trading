@@ -384,15 +384,15 @@
                 </div>
 
                 <!-- STATS CARDS GRID -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <!-- Card 1 — Bot Control Forex (Interactif) -->
-                    <div class="glass-card rounded-2xl p-4 flex flex-col gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Card 1 — Bot Control (Interactif) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col gap-3">
                         <div class="flex justify-between items-start">
                             <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
                                 <i data-lucide="cpu" class="w-5 h-5"></i>
                             </div>
                             <!-- Indicateur statut en temps réel -->
-                            <div id="botStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700">
+                            <div id="botStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800 border border-slate-700">
                                 <span id="botStatusDot" class="bot-status-dot dot-inactive"></span>
                                 <span id="botStatusText" class="text-xs font-bold text-slate-400">Chargement...</span>
                             </div>
@@ -409,34 +409,10 @@
                         </button>
                     </div>
 
-                    <!-- Card 2 — Bot Control Crypto (Interactif) -->
-                    <div class="glass-card rounded-2xl p-4 flex flex-col gap-2">
-                        <div class="flex justify-between items-start">
-                            <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-                                <i data-lucide="bitcoin" class="w-5 h-5"></i>
-                            </div>
-                            <!-- Indicateur statut en temps réel -->
-                            <div id="cryptoBotStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700">
-                                <span id="cryptoBotStatusDot" class="bot-status-dot dot-inactive"></span>
-                                <span id="cryptoBotStatusText" class="text-xs font-bold text-slate-400">Chargement...</span>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-slate-400 text-xs mb-0.5">Statut du Bot</p>
-                            <h3 class="text-xl font-bold">BTC Scalper</h3>
-                            <p id="cryptoBotHeartbeatText" class="text-xs text-slate-500 mt-0.5">--</p>
-                        </div>
-                        <!-- Bouton Start/Stop (Admin uniquement) -->
-                        <button id="cryptoBotToggleBtn" class="bot-toggle-btn state-loading" onclick="toggleCryptoBot()" disabled>
-                            <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
-                            <span id="cryptoBotToggleBtnText">Chargement...</span>
-                        </button>
-                    </div>
-
-                    <!-- Card 3 -->
-                    <div class="glass-card rounded-2xl p-4 relative overflow-hidden">
+                    <!-- Card 2 -->
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
                         <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-sky-500/10 rounded-full blur-xl"></div>
-                        <div class="flex justify-between items-start mb-3">
+                        <div class="flex justify-between items-start mb-4">
                             <div class="p-2 rounded-lg bg-sky-500/10 text-sky-400">
                                 <i data-lucide="wallet" class="w-5 h-5"></i>
                             </div>
@@ -446,9 +422,9 @@
                         <h3 class="text-3xl font-bold font-heading tracking-tight" id="dashTotalProfit">$0.00</h3>
                     </div>
 
-                    <!-- Card 4 -->
-                    <div class="glass-card rounded-2xl p-4">
-                        <div class="flex justify-between items-start mb-3">
+                    <!-- Card 3 -->
+                    <div class="glass-card rounded-2xl p-5">
+                        <div class="flex justify-between items-start mb-4">
                             <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                                 <i data-lucide="target" class="w-5 h-5"></i>
                             </div>
@@ -464,9 +440,9 @@
                         </div>
                     </div>
 
-                    <!-- Card 5 -->
-                    <div class="glass-card rounded-2xl p-4">
-                        <div class="flex justify-between items-start mb-3">
+                    <!-- Card 4 -->
+                    <div class="glass-card rounded-2xl p-5">
+                        <div class="flex justify-between items-start mb-4">
                             <div class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
                                 <i data-lucide="trending-down" class="w-5 h-5"></i>
                             </div>
@@ -2593,60 +2569,6 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function updateCryptoBotUI(tradingEnabled, lastHeartbeat) {
-            const btn     = document.getElementById('cryptoBotToggleBtn');
-            const btnText = document.getElementById('cryptoBotToggleBtnText');
-            const dot     = document.getElementById('cryptoBotStatusDot');
-            const statusT = document.getElementById('cryptoBotStatusText');
-            const heartEl = document.getElementById('cryptoBotHeartbeatText');
-
-            if (!btn) return;
-
-            // Vérifie si le bot Python est "vivant" (heartbeat < 90 secondes)
-            let botAlive = false;
-            if (lastHeartbeat) {
-                const diff = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000;
-                botAlive = diff < 90;
-                const mins = Math.floor(diff / 60);
-                const secs = Math.floor(diff % 60);
-                heartEl.innerText = botAlive
-                    ? `Actif il y a ${mins > 0 ? mins + 'm ' : ''}${secs}s`
-                    : `Hors ligne depuis ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
-            } else {
-                heartEl.innerText = 'Bot Python non démarré';
-            }
-
-            _cryptoBotTradingEnabled = tradingEnabled;
-
-            if (!botAlive) {
-                // Bot Python pas en cours d'exécution
-                dot.className = 'bot-status-dot dot-offline';
-                statusT.innerText = 'HORS LIGNE';
-                statusT.className = 'text-xs font-bold text-red-400';
-                btn.className = 'bot-toggle-btn state-loading';
-                btn.disabled = true;
-                btn.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i><span>Bot Déconnecté</span>`;
-            } else if (tradingEnabled) {
-                // Bot actif — trading en cours
-                dot.className = 'bot-status-dot dot-active';
-                statusT.innerText = 'TRADING ACTIF';
-                statusT.className = 'text-xs font-bold text-emerald-400';
-                btn.className = 'bot-toggle-btn state-active';
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Arrêter le Trading</span>`;
-            } else {
-                // Bot en veille — pas de trading
-                dot.className = 'bot-status-dot dot-inactive';
-                statusT.innerText = 'EN VEILLE';
-                statusT.className = 'text-xs font-bold text-slate-400';
-                btn.className = 'bot-toggle-btn state-inactive';
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Démarrer le Trading</span>`;
-            }
-            // Rafraîchir les icônes Lucide
-            if (window.lucide) lucide.createIcons();
-        }
-
         async function fetchBotStatus() {
             try {
                 const { data, error } = await supabaseClient
@@ -2663,24 +2585,6 @@
             } catch(e) {
                 console.warn('bot_control fetch error:', e);
                 updateBotUI(false, null);
-            }
-        }
-
-        async function fetchCryptoBotStatus() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('bot_control')
-                    .select('trading_enabled, last_heartbeat')
-                    .eq('id', 2)
-                    .single();
-                if (data) {
-                    updateCryptoBotUI(data.trading_enabled, data.last_heartbeat);
-                } else {
-                    updateCryptoBotUI(false, null);
-                }
-            } catch(e) {
-                console.warn('crypto bot_control fetch error:', e);
-                updateCryptoBotUI(false, null);
             }
         }
 
@@ -2710,41 +2614,11 @@
             }
         }
 
-        async function toggleCryptoBot() {
-            const btn = document.getElementById('cryptoBotToggleBtn');
-            if (!btn || btn.disabled) return;
-
-            const newState = !_cryptoBotTradingEnabled;
-            btn.disabled = true;
-            btn.className = 'bot-toggle-btn state-loading';
-            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>${newState ? 'Activation...' : 'Arrêt...'}</span>`;
-            if (window.lucide) lucide.createIcons();
-
-            try {
-                const { error } = await supabaseClient
-                    .from('bot_control')
-                    .upsert({ id: 2, trading_enabled: newState }, { onConflict: 'id' });
-
-                if (error) throw error;
-
-                // Feedback visuel immédiat
-                setTimeout(fetchCryptoBotStatus, 500);
-            } catch(e) {
-                console.error('Toggle crypto bot error:', e);
-                alert('Erreur: Impossible de changer l\'état du bot Crypto. Vérifiez votre connexion.');
-                fetchCryptoBotStatus(); // Restaurer l'état réel
-            }
-        }
-
         // Charger le statut initial
         fetchBotStatus();
-        fetchCryptoBotStatus();
 
         // Rafraichir toutes les 20 secondes (pour le heartbeat)
-        setInterval(() => {
-            fetchBotStatus();
-            fetchCryptoBotStatus();
-        }, 20000);
+        setInterval(fetchBotStatus, 20000);
 
         // Ecoute en temps reel les changements de bot_control
         supabaseClient
@@ -2753,11 +2627,7 @@
                 { event: '*', schema: 'public', table: 'bot_control' },
                 (payload) => {
                     if (payload.new) {
-                        if (payload.new.id === 1) {
-                            updateBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
-                        } else if (payload.new.id === 2) {
-                            updateCryptoBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
-                        }
+                        updateBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
                     }
                 }
             )
@@ -2783,18 +2653,8 @@
                         <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
                         <span class="text-xs text-slate-500 font-medium">Controle Admin</span>
                     </div>`;
+                if (window.lucide) lucide.createIcons();
             }
-
-            const cryptoBotBtn = document.getElementById('cryptoBotToggleBtn');
-            if (!isAdmin && cryptoBotBtn) {
-                cryptoBotBtn.outerHTML = `
-                    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/50">
-                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span class="text-xs text-slate-500 font-medium">Controle Admin</span>
-                    </div>`;
-            }
-
-            if (window.lucide) lucide.createIcons();
 
             // Afficher/cacher la section Admin dans le sidebar
             const adminNavSection = document.getElementById('adminNavSection');
