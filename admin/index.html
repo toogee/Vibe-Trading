@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Trading — Admin Control Center</title>
+    <meta name="description"
+        content="Panneau d'administration Vibe Trading. Gestion des utilisateurs, paiements, comptes MT5 et trades en temps réel.">
+    <meta name="robots" content="noindex, nofollow">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0ea5e9">
+
+    <!-- Tailwind CSS (CDN for Development) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind Config for Admin -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-[#030712] text-slate-200 font-sans antialiased;
+            }
+        }
+        
+        @layer components {
+            .admin-glass {
+                @apply bg-[#0f172a]/70 backdrop-blur-xl border border-slate-700/50 shadow-2xl;
+            }
+            .admin-glass-glow {
+                @apply bg-[#0f172a]/80 backdrop-blur-xl border border-[#38bdf8]/30 shadow-[0_0_30px_rgba(56,189,248,0.1)];
+            }
+            .nav-item {
+                @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all duration-300 font-medium;
+            }
+            .nav-item.active {
+                @apply bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.15)];
+            }
+            .glow-btn {
+                @apply bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-bold rounded-xl hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all duration-300;
+            }
+            .admin-table {
+                @apply w-full text-left border-collapse whitespace-nowrap;
+            }
+            .admin-table th {
+                @apply pb-3 px-4 font-semibold text-xs uppercase tracking-wider text-slate-500 border-b border-slate-700/50;
+            }
+            .admin-table td {
+                @apply py-4 px-4 border-b border-slate-700/50 text-sm;
+            }
+            .badge {
+                @apply px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border;
+            }
+            .badge-success {
+                @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)];
+            }
+            .badge-danger {
+                @apply bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.1)];
+            }
+            .badge-warning {
+                @apply bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)];
+            }
+            .badge-info {
+                @apply bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_10px_rgba(56,189,248,0.1)];
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/admin.css">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
+<style>
+        html, body {
+            touch-action: manipulation;
+        }
+</style></head>
+
+<body class="bg-[#030712] text-slate-200 overflow-hidden h-screen flex">
+
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" onclick="closeSidebar()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:25; backdrop-filter:blur(2px);"></div>
+
+    <!-- BACKGROUND GLOW EFFECTS -->
+    <div class="fixed top-0 left-1/4 w-[500px] h-[500px] bg-sky-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse-glow z-0"></div>
+    <div class="fixed bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none animate-float z-0"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar"
+        class="admin-glass border-r border-slate-800/50 flex flex-col h-full transition-all duration-300"
+        style="width:288px; flex-shrink:0; position:fixed; left:0; top:0; bottom:0; z-index:30; transform:translateX(-100%);">
+        <!-- Logo Area -->
+        <div
+            style="min-height:80px; display:flex; flex-direction:column; justify-content:center; padding:0 1.5rem; border-bottom:1px solid rgba(30,41,59,0.5);">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div
+                    style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg,#38bdf8,#6366f1); padding:1px; box-shadow:0 0 15px rgba(56,189,248,0.5); flex-shrink:0;">
+                    <div
+                        style="width:100%; height:100%; background:#0f172a; border-radius:11px; display:flex; align-items:center; justify-content:center;">
+                        <i data-lucide="zap" style="width:20px; height:20px; color:#38bdf8;"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 style="font-size:18px; font-weight:700; color:white; letter-spacing:0.05em; margin:0;">VIBE
+                        <span style="color:#38bdf8;">ADMIN</span></h1>
+                    <p
+                        style="font-size:10px; color:#64748b; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin:0;">
+                        Control Center</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+            <p class="text-xs font-semibold text-slate-500 mb-4 px-4 tracking-wider uppercase">Main Menu</p>
+
+            <a href="#" class="nav-item active" data-tab="dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                Dashboard
+            </a>
+
+            <a href="#" class="nav-item" data-tab="users">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                Users
+            </a>
+
+            <a href="#" class="nav-item" data-tab="payments">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                Payments
+                <span id="pendingPaymentsBadge"
+                    class="ml-auto bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+            </a>
+
+            <a href="#" class="nav-item" data-tab="mt5">
+                <i data-lucide="server" class="w-5 h-5"></i>
+                MT5 Accounts
+            </a>
+
+            <a href="#" class="nav-item" data-tab="trades">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+                Live Trades
+                <div class="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+            </a>
+
+            <p class="text-xs font-semibold text-slate-500 mt-8 mb-4 px-4 tracking-wider uppercase">System</p>
+
+            <a href="#" class="nav-item" data-tab="analytics">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                Analytics
+            </a>
+
+            <a href="#" class="nav-item" data-tab="notifications">
+                <i data-lucide="bell" class="w-5 h-5"></i>
+                Notifications
+            </a>
+
+            <a href="#" class="nav-item" data-tab="settings">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                Settings
+            </a>
+
+        </nav>
+
+        <!-- Bottom Actions -->
+        <div style="padding:1rem; border-top:1px solid rgba(30,41,59,0.5); flex-shrink:0;">
+            <a href="../dashboard.html"
+                style="display:flex; align-items:center; gap:10px; width:100%; padding:10px 14px; border-radius:12px; background:rgba(14,165,233,0.1); color:#38bdf8; border:1px solid rgba(14,165,233,0.25); font-size:13px; font-weight:600; text-decoration:none; margin-bottom:8px;">
+                <i data-lucide="layout-dashboard" style="width:16px; height:16px;"></i>
+                Mon Dashboard
+            </a>
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; cursor:pointer;"
+                id="logoutBtn" onmouseover="this.style.background='rgba(30,41,59,0.5)'"
+                onmouseout="this.style.background='transparent'">
+                <img src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff"
+                    style="width:36px; height:36px; border-radius:50%; border:1px solid rgba(56,189,248,0.5);"
+                    alt="Admin">
+                <div style="flex:1; min-width:0;">
+                    <p id="adminName"
+                        style="font-size:13px; font-weight:700; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        Loading...</p>
+                    <p style="font-size:11px; color:#38bdf8;">Super Admin</p>
+                </div>
+                <i data-lucide="log-out" style="width:15px; height:15px; color:#64748b; flex-shrink:0;"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex flex-col h-screen relative z-10 overflow-hidden bg-slate-900/20" style="width:100%; margin-left:0;">
+
+        <!-- TOPBAR -->
+        <header class="admin-glass border-b border-slate-800/50 flex items-center justify-between px-4 md:px-8 shrink-0" style="height:64px;">
+            <div class="flex items-center gap-3">
+                <!-- Hamburger Menu -->
+                <button id="mobileMenuBtn" onclick="toggleSidebar()"
+                    style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:10px; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.2); color:#38bdf8; cursor:pointer; flex-shrink:0;">
+                    <i data-lucide="menu" style="width:20px; height:20px;"></i>
+                </button>
+                <h2 id="topbarTitle" class="font-heading font-bold text-white" style="font-size:clamp(14px,3vw,20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">Dashboard Overview</h2>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <!-- Search -->
+                <div class="relative hidden md:block">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" placeholder="Search users, TXIDs..."
+                        class="bg-[#0f172a]/80 border border-slate-700 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 w-64 text-white placeholder-slate-500 transition-all">
+                </div>
+
+                <!-- System Status -->
+                <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span class="text-xs font-bold text-emerald-400 tracking-wider">SYSTEM ONLINE</span>
+                </div>
+
+                <!-- Notifications -->
+                <button class="relative text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="bell" class="w-6 h-6"></i>
+                    <span
+                        class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-[#0f172a] rounded-full"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- PAGE CONTENT (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8 scroll-smooth" id="mainContent">
+
+            <!-- LOADING OVERLAY -->
+            <div id="loadingOverlay"
+                class="absolute inset-0 z-50 bg-[#030712]/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                <i data-lucide="loader-2" class="w-10 h-10 text-sky-400 animate-spin mb-4"></i>
+                <h2 class="text-xl font-heading font-bold text-white">Authenticating Admin...</h2>
+            </div>
+
+            <!-- TAB: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-pane active space-y-6">
+                <!-- Stats Row 1 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="admin-glass rounded-2xl p-6 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-4 -top-4 w-24 h-24 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all">
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400 mb-1">Total Users</p>
+                                <h3 id="statTotalUsers" class="text-3xl font-heading font-bold text-white">0</h3>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20">
+                                <i data-lucide="users" class="w-5 h-5 text-sky-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs relative z-10">
+                            <span class="text-emerald-400 flex items-center"><i data-lucide="trending-up"
+                                    class="w-3 h-3 mr-1"></i> +12%</span>
+                            <span class="text-slate-500">vs last month</span>
+                        </div>
+                    </div>
+
+                    <div class="admin-glass rounded-2xl p-6 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all">
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400 mb-1">Active Subs</p>
+                                <h3 id="statActiveSubs" class="text-3xl font-heading font-bold text-white">0</h3>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                                <i data-lucide="credit-card" class="w-5 h-5 text-indigo-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-glass rounded-2xl p-6 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all">
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400 mb-1">Connected MT5</p>
+                                <h3 id="statConnectedMT5" class="text-3xl font-heading font-bold text-white">0</h3>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                <i data-lucide="server" class="w-5 h-5 text-emerald-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-glass rounded-2xl p-6 relative overflow-hidden group">
+                        <div
+                            class="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all">
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400 mb-1">Pending Payments</p>
+                                <h3 id="statPendingPayments" class="text-3xl font-heading font-bold text-white">0</h3>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+                                <i data-lucide="clock" class="w-5 h-5 text-rose-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 admin-glass rounded-2xl p-6">
+                        <h3 class="font-heading font-bold text-lg mb-4">Revenue Growth</h3>
+                        <div class="h-72 w-full">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="admin-glass rounded-2xl p-6">
+                        <h3 class="font-heading font-bold text-lg mb-4">System Status</h3>
+                        <div class="space-y-4">
+                            <div
+                                class="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Trading Bot</p>
+                                    <p class="text-xs text-slate-400">MT5 Engine</p>
+                                </div>
+                                <span class="badge badge-success">ACTIVE</span>
+                            </div>
+                            <div
+                                class="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Supabase DB</p>
+                                    <p class="text-xs text-slate-400">Database & Realtime</p>
+                                </div>
+                                <span class="badge badge-success">ONLINE</span>
+                            </div>
+                            <div
+                                class="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm font-bold text-white">News Filter</p>
+                                    <p class="text-xs text-slate-400">Forex Factory API</p>
+                                </div>
+                                <span class="badge badge-warning">SLEEPING</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: USERS -->
+            <div id="tab-users" class="tab-pane space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-heading font-bold">User Management</h2>
+                    <button class="glow-btn px-4 py-2 flex items-center gap-2 text-sm"><i data-lucide="plus"
+                            class="w-4 h-4"></i> Add User</button>
+                </div>
+                <div class="admin-glass rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PAYMENTS -->
+            <div id="tab-payments" class="tab-pane space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-heading font-bold">Payments Approval</h2>
+                </div>
+                <div class="admin-glass rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Method</th>
+                                    <th>TXID / Ref</th>
+                                    <th>Amount</th>
+                                    <th>Proof</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentsTableBody">
+                                <!-- Populated by JS -->
+                                <tr>
+                                    <td colspan="7" class="text-center py-8 text-slate-500">No pending payments.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: MT5 ACCOUNTS -->
+            <div id="tab-mt5" class="tab-pane space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-heading font-bold">Connected MT5 Accounts</h2>
+                </div>
+                <div class="admin-glass rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Broker & Server</th>
+                                    <th>Login ID</th>
+                                    <th>Password</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mt5TableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: TRADES -->
+            <div id="tab-trades" class="tab-pane space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-heading font-bold">Live System Trades</h2>
+                    <span class="badge badge-success animate-pulse">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1"></div> REAL-TIME FEED
+                    </span>
+                </div>
+                <div class="admin-glass rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User ID</th>
+                                    <th>Pair</th>
+                                    <th>Type</th>
+                                    <th>Entry</th>
+                                    <th>Profit</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveTradesBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: ANALYTICS -->
+            <div id="tab-analytics" class="tab-pane space-y-6">
+                <h2 class="text-xl font-heading font-bold text-center py-20 text-slate-500">Analytics Module Coming
+                    Soon...</h2>
+            </div>
+
+            <!-- TAB: NOTIFICATIONS -->
+            <div id="tab-notifications" class="tab-pane space-y-6">
+                <h2 class="text-xl font-heading font-bold text-center py-20 text-slate-500">Notifications Center Coming
+                    Soon...</h2>
+            </div>
+
+            <!-- TAB: SETTINGS -->
+            <div id="tab-settings" class="tab-pane space-y-6">
+                <h2 class="text-xl font-heading font-bold">System Settings</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="admin-glass rounded-2xl p-6 space-y-6">
+                        <h3 class="text-lg font-bold border-b border-slate-700/50 pb-3">Trading Engine</h3>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-bold text-white">Master Trading Switch</p>
+                                <p class="text-xs text-slate-400">Enable or disable trading for ALL users.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" checked>
+                                <div
+                                    class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-bold text-white">News Filter Protection</p>
+                                <p class="text-xs text-slate-400">Pause trading 30m before/after High Impact news.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" checked>
+                                <div
+                                    class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <!-- Confirmation Modal -->
+    <div id="confirmModal"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-slate-950/80 backdrop-blur-sm">
+        <div class="admin-glass w-full max-w-sm rounded-2xl p-6 transform scale-95 opacity-0 transition-all duration-200"
+            id="confirmModalContent">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" id="confirmModalIconBg">
+                    <i data-lucide="alert-triangle" class="w-5 h-5" id="confirmModalIcon"></i>
+                </div>
+                <h3 class="text-xl font-bold font-heading text-white" id="confirmModalTitle">Confirmer</h3>
+            </div>
+            <p class="text-slate-300 text-sm mb-6" id="confirmModalText">Êtes-vous sûr ?</p>
+            <div class="flex gap-3 justify-end">
+                <button id="confirmModalCancel"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">Annuler</button>
+                <button id="confirmModalConfirm"
+                    class="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-lg hover:shadow-none"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Config & Main Admin Logic -->
+    <script src="../supabaseClient.js"></script>
+    <script src="js/admin.js"></script>
+
+    <!-- Mobile Sidebar Toggle -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        let sidebarOpen = false;
+
+        function openSidebar() {
+            sidebar.style.transform = 'translateX(0)';
+            overlay.style.display = 'block';
+            sidebarOpen = true;
+        }
+
+        function closeSidebar() {
+            sidebar.style.transform = 'translateX(-100%)';
+            overlay.style.display = 'none';
+            sidebarOpen = false;
+        }
+
+        function toggleSidebar() {
+            if (sidebarOpen) closeSidebar();
+            else openSidebar();
+        }
+
+        // Auto-open on desktop screens
+        function handleResize() {
+            if (window.innerWidth >= 1024) {
+                sidebar.style.transform = 'translateX(0)';
+                sidebar.style.position = 'relative';
+                overlay.style.display = 'none';
+                sidebarOpen = true;
+                document.querySelector('main').style.marginLeft = '0';
+            } else {
+                sidebar.style.position = 'fixed';
+                if (!sidebarOpen) {
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Run on load
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+{
+  "css.validate": false,
+  "scss.validate": false,
+  "less.validate": false,
+  "css.customData": [],
+  "editor.autoSave": "afterDelay",
+  "editor.autoSaveDelay": 1000,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000
+}

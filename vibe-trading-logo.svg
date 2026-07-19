@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" width="800" height="200">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&amp;display=swap');
+      .vibe {
+        font-family: 'Montserrat', sans-serif, Arial, Helvetica;
+        font-size: 64px;
+        font-weight: 700;
+        fill: #ffffff;
+      }
+      .trading {
+        font-family: 'Montserrat', sans-serif, Arial, Helvetica;
+        font-size: 64px;
+        font-weight: 700;
+        fill: #0ea5e9;
+      }
+    </style>
+  </defs>
+  
+  <!-- Optional: remove the background rect if you want it completely transparent. 
+       Keeping it slightly dark here just for preview purposes if opened directly, 
+       but for a true transparent logo, remove this rect. -->
+  <rect width="100%" height="100%" fill="transparent" />
+
+  <!-- Text -->
+  <text x="20" y="70" class="vibe">Vibe<tspan class="trading">Trading</tspan></text>
+</svg>

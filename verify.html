@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Trading - Vérification d'Email</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html, body {
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #020617; /* slate-950 */
+            color: #f8fafc;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Animated Blobs Background */
+        .bg-blobs {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(100px);
+            border-radius: 50%;
+            animation: float 20s infinite alternate ease-in-out;
+            opacity: 0.4;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 600px; height: 600px; background: #0ea5e9; }
+        .blob-2 { bottom: -20%; right: -10%; width: 700px; height: 700px; background: #2563eb; animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; background: #3b82f6; animation-delay: -10s; opacity: 0.2; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 30px) scale(1.1); }
+            100% { transform: translate(-30px, -50px) scale(0.9); }
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.15);
+            animation: cardFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @keyframes cardFadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(to right, #0ea5e9, #2563eb);
+            color: white;
+            font-weight: 600;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
+
+    </style>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-8">
+
+    <!-- Background -->
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="w-full max-w-[480px] z-10">
+        <div class="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden text-center">
+            <!-- Glare effect -->
+            <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"></div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="block">
+                <div class="w-16 h-16 rounded-full border-4 border-slate-700 border-t-sky-400 animate-spin mx-auto mb-6"></div>
+                <h1 class="font-heading text-2xl font-bold mb-3 tracking-tight">Vérification en cours...</h1>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    Veuillez patienter pendant que nous validons votre adresse email avec notre serveur.
+                </p>
+            </div>
+
+            <!-- Success State -->
+            <div id="successState" class="hidden">
+                <div class="w-20 h-20 bg-gradient-to-br from-emerald-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30 ring-8 ring-emerald-500/10">
+                    <i data-lucide="check-circle" class="text-white w-10 h-10"></i>
+                </div>
+                <h1 class="font-heading text-3xl font-bold mb-3 tracking-tight text-white">Email Confirmé !</h1>
+                <p class="text-slate-300 text-sm mb-8 leading-relaxed">
+                    Votre compte est maintenant vérifié et entièrement actif. Bienvenue sur Vibe Trading !
+                </p>
+                <a href="login.html" class="btn-primary group">
+                    <span>Accéder à mon compte</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="hidden">
+                <div class="w-20 h-20 bg-gradient-to-br from-red-400 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/30 ring-8 ring-red-500/10">
+                    <i data-lucide="x-circle" class="text-white w-10 h-10"></i>
+                </div>
+                <h1 class="font-heading text-3xl font-bold mb-3 tracking-tight text-white">Lien Invalide</h1>
+                <p class="text-slate-300 text-sm mb-8 leading-relaxed">
+                    Le lien de confirmation a expiré ou n'est pas valide. Veuillez essayer de vous connecter pour recevoir un nouveau lien.
+                </p>
+                <a href="login.html" class="btn-primary group" style="background: linear-gradient(to right, #64748b, #475569); box-shadow: 0 0 20px rgba(100, 116, 139, 0.3);">
+                    <span>Retour à la connexion</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+
+    <script>
+        lucide.createIcons();
+
+        // Elements
+        const loadingState = document.getElementById('loadingState');
+        const successState = document.getElementById('successState');
+        const errorState = document.getElementById('errorState');
+
+        async function handleVerification() {
+            try {
+                const hash = window.location.hash;
+                if (hash && hash.includes('error=')) {
+                    loadingState.classList.remove('block');
+                    loadingState.classList.add('hidden');
+                    errorState.classList.remove('hidden');
+                    return;
+                }
+
+                // Supabase automatically consumes the access_token from the URL hash on load
+                // and establishes a session.
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || session) {
+                        loadingState.classList.remove('block');
+                        loadingState.classList.add('hidden');
+                        successState.classList.remove('hidden');
+                    } else if (event === 'SIGNED_OUT') {
+                        loadingState.classList.remove('block');
+                        loadingState.classList.add('hidden');
+                        errorState.classList.remove('hidden');
+                    }
+                });
+
+                // Fallback timeout in case onAuthStateChange doesn't fire
+                setTimeout(() => {
+                    if (loadingState.classList.contains('block')) {
+                        supabaseClient.auth.getSession().then(({ data }) => {
+                            loadingState.classList.remove('block');
+                            loadingState.classList.add('hidden');
+                            if (data.session) {
+                                successState.classList.remove('hidden');
+                            } else {
+                                errorState.classList.remove('hidden');
+                            }
+                        });
+                    }
+                }, 2000);
+
+            } catch (err) {
+                console.error("Verification error:", err);
+                loadingState.classList.remove('block');
+                loadingState.classList.add('hidden');
+                errorState.classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', handleVerification);
+    </script>
+</body>
+</html>

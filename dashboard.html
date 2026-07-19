@@ -1,0 +1,2815 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Trading — Tableau de Bord | Mon Espace Trading</title>
+    <meta name="description" content="Suivez vos performances de trading GBPUSD en temps réel. Statut du bot SSED V2, historique des trades, profit total et taux de réussite.">
+    <meta name="robots" content="noindex, nofollow">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0ea5e9">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            800: '#0f172a',
+                            900: '#020617',
+                        },
+                        neon: {
+                            blue: '#0ea5e9',
+                            dark: '#0284c7',
+                            green: '#10b981',
+                            red: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html, body {
+            touch-action: manipulation;
+        }
+
+        /* Base & Scrollbar */
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            overflow: hidden; /* Prevent body scroll, handle scroll in main area */
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.5); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.5); }
+
+        /* Animated Background */
+        .bg-fx { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+        .glow-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.15; animation: drift 20s infinite alternate ease-in-out; }
+        .orb-1 { width: 500px; height: 500px; background: #0ea5e9; top: -10%; left: -10%; }
+        .orb-2 { width: 600px; height: 600px; background: #3b82f6; bottom: -10%; right: -10%; animation-delay: -5s; }
+        @keyframes drift { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(50px, 50px) scale(1.2); } }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-top: 1px solid rgba(14, 165, 233, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px -10px rgba(14, 165, 233, 0.15);
+            border-top: 1px solid rgba(14, 165, 233, 0.5);
+        }
+
+        /* Sidebar Nav Item */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #94a3b8;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+            background: rgba(14, 165, 233, 0.1);
+        }
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 10%; height: 80%; width: 4px;
+            background: #0ea5e9;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 10px #0ea5e9;
+        }
+        .nav-item i { transition: transform 0.3s; }
+        .nav-item:hover i { transform: scale(1.1); color: #0ea5e9; }
+
+        /* Fake Chart Animation */
+        .chart-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw 3s ease forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+        .chart-glow { filter: drop-shadow(0 0 8px rgba(14,165,233,0.6)); }
+
+        /* Status Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); text-shadow: 0 0 10px rgba(52, 211, 153, 0.5); }
+        .badge-pro { background: linear-gradient(90deg, #0ea5e9, #3b82f6); color: white; box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+
+        /* Inputs */
+        .input-dark {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            color: white;
+            transition: all 0.3s;
+        }
+        .input-dark:focus { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); outline: none; }
+        .btn-gradient {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+            transition: all 0.3s;
+        }
+        .btn-gradient:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5); transform: translateY(-2px); }
+
+        /* Table */
+        .table-row { transition: background 0.2s; border-bottom: 1px solid rgba(51, 65, 85, 0.3); }
+        .table-row:hover { background: rgba(30, 41, 59, 0.5); }
+
+        /* Fade Animation for tabs */
+        .tab-content { display: none; opacity: 0; transition: opacity 0.4s ease; }
+        .tab-content.active { display: block; opacity: 1; animation: fadeInUp 0.5s ease forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Sidebar Mobile Toggle */
+        @media (max-width: 1024px) {
+            #sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+            #sidebar.open { transform: translateX(0); }
+        }
+
+        /* Bot Toggle Button */
+        .bot-toggle-btn {
+            position: relative;
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .bot-toggle-btn.state-active {
+            background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.1));
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.4);
+            box-shadow: 0 0 20px rgba(239,68,68,0.15);
+        }
+        .bot-toggle-btn.state-active:hover {
+            background: linear-gradient(135deg, rgba(239,68,68,0.3), rgba(220,38,38,0.2));
+            box-shadow: 0 0 30px rgba(239,68,68,0.25);
+            transform: translateY(-1px);
+        }
+        .bot-toggle-btn.state-inactive {
+            background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1));
+            color: #34d399;
+            border: 1px solid rgba(16,185,129,0.4);
+            box-shadow: 0 0 20px rgba(16,185,129,0.15);
+        }
+        .bot-toggle-btn.state-inactive:hover {
+            background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(5,150,105,0.2));
+            box-shadow: 0 0 30px rgba(16,185,129,0.25);
+            transform: translateY(-1px);
+        }
+        .bot-toggle-btn.state-loading {
+            background: rgba(51,65,85,0.3);
+            color: #94a3b8;
+            border: 1px solid rgba(51,65,85,0.5);
+            cursor: not-allowed;
+        }
+        .bot-status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-active { background: #34d399; box-shadow: 0 0 8px #34d399; animation: pulse-green 2s infinite; }
+        .dot-inactive { background: #6b7280; }
+        .dot-offline { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse-red 2s infinite; }
+        @keyframes pulse-green { 0%,100%{box-shadow:0 0 6px #34d399;} 50%{box-shadow:0 0 14px #34d399;} }
+        @keyframes pulse-red   { 0%,100%{box-shadow:0 0 6px #ef4444;} 50%{box-shadow:0 0 14px #ef4444;} }
+    </style>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</head>
+<body class="flex h-screen text-sm sm:text-base font-sans">
+
+    <!-- Background Orbs -->
+    <div class="bg-fx">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="glass-panel w-64 h-full fixed lg:relative z-50 flex flex-col shrink-0">
+        <!-- Logo -->
+        <div class="h-20 flex items-center px-6 border-b border-slate-700/50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
+                    <i data-lucide="activity" class="text-white w-5 h-5"></i>
+                </div>
+                <span class="font-heading font-bold text-xl tracking-tight">Vibe<span class="text-sky-400">Trading</span></span>
+            </div>
+            <button id="closeSidebarBtn" class="ml-auto lg:hidden text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+            <div class="text-xs font-semibold text-slate-500 mb-4 px-2 tracking-wider">MAIN MENU</div>
+            
+            <a href="#" class="nav-item active" data-target="tab-dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                Dashboard
+            </a>
+            <a href="guide.html" class="nav-item text-sky-400">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                Guide de Démarrage
+            </a>
+            <a href="#" class="nav-item" data-target="tab-trades">
+                <i data-lucide="trending-up" class="w-5 h-5"></i>
+                Live Trades
+            </a>
+            <a href="#" class="nav-item" data-target="tab-stats">
+                <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                Performance
+            </a>
+            
+            <div class="text-xs font-semibold text-slate-500 mt-8 mb-4 px-2 tracking-wider">SYSTEM</div>
+            
+            <a href="#" class="nav-item flex items-center justify-between" data-target="tab-mt5">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="server" class="w-5 h-5"></i>
+                    Connexion MT5
+                </div>
+                <!-- Status indicator dot -->
+                <div id="sidebarMT5Dot" class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#ef4444]"></div>
+            </a>
+            <a href="#" class="nav-item" data-target="tab-billing">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                Abonnement
+            </a>
+            <a href="#" class="nav-item" data-target="tab-settings">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                Paramètres
+            </a>
+
+            <div class="text-xs font-semibold text-slate-500 mt-8 mb-4 px-2 tracking-wider">SUPPORT</div>
+            
+            <a href="#" class="nav-item" data-target="tab-faq">
+                <i data-lucide="help-circle" class="w-5 h-5"></i>
+                FAQ
+            </a>
+            <a href="#" class="nav-item" data-target="tab-contact">
+                <i data-lucide="mail" class="w-5 h-5"></i>
+                Contact
+            </a>
+
+            <!-- ADMIN SECTION — Cache par defaut, visible seulement pour admins -->
+            <div id="adminNavSection" class="hidden">
+                <div class="text-xs font-semibold mt-8 mb-4 px-2 tracking-wider"
+                     style="color: #f59e0b;">ADMINISTRATION</div>
+                <a href="admin/index.html" class="nav-item"
+                   style="color: #fbbf24; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px;">
+                    <i data-lucide="shield" class="w-5 h-5" style="color:#f59e0b;"></i>
+                    <span>Admin</span>
+                    <span class="ml-auto text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">ADMIN</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Logout -->
+        <div class="p-4 border-t border-slate-700/50">
+            <a href="#" id="logoutBtn" class="nav-item text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                Se Déconnecter
+            </a>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
+        
+        <!-- TOPBAR -->
+        <header class="h-20 glass-panel border-b-0 border-l-0 flex items-center justify-between px-4 sm:px-8 shrink-0">
+            <div class="flex items-center gap-4">
+                <button id="openSidebarBtn" class="lg:hidden text-slate-300 hover:text-white p-2">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <div>
+                    <h2 id="headerUserName" class="text-lg font-semibold hidden sm:block">Welcome back, User</h2>
+                    <p class="text-xs text-sky-400 font-medium">London Session Active</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 sm:gap-6">
+                <!-- Plan Badge -->
+                <div id="headerPlanBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 hidden sm:flex items-center gap-1 cursor-pointer hover:bg-sky-500/20 transition-all">
+                    Activer un Plan
+                </div>
+                
+                <!-- Notifications -->
+                <button onclick="showComingSoonModal('Notifications', 'Vous n\'avez aucune nouvelle notification pour le moment.')" class="relative text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="bell" class="w-6 h-6"></i>
+                    <span class="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-slate-900"></span>
+                </button>
+
+                <!-- Avatar -->
+                <div id="headerProfileAvatar" class="flex items-center gap-3 pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition-opacity">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-sky-500 p-0.5 relative">
+                        <img id="headerUserAvatar" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
+                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE CONTENT -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8">
+            
+            <!-- TAB 1: DASHBOARD (Default) -->
+            <div id="tab-dashboard" class="tab-content active max-w-7xl mx-auto space-y-6">
+                
+                <!-- Page Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                    <div>
+                        <h1 class="text-2xl font-bold font-heading">Aperçu</h1>
+                        <p class="text-slate-400 text-sm">Métriques de performance en temps réel</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btnFilterToday" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700">Aujourd'hui</button>
+                        <button id="btnFilterAll" class="px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30">Depuis Toujours</button>
+                    </div>
+                </div>
+
+                <!-- STATS CARDS GRID -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- Card 1 — Bot Control Forex (Interactif) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <i data-lucide="cpu" class="w-5 h-5"></i>
+                            </div>
+                            <!-- Indicateur statut en temps réel -->
+                            <div id="botStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800 border border-slate-700">
+                                <span id="botStatusDot" class="bot-status-dot dot-inactive"></span>
+                                <span id="botStatusText" class="text-xs font-bold text-slate-400">Chargement...</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-slate-400 text-xs mb-0.5">Statut du Bot</p>
+                            <h3 class="text-xl font-bold">SSED V2</h3>
+                            <p id="botHeartbeatText" class="text-xs text-slate-500 mt-0.5">--</p>
+                        </div>
+                        <!-- Bouton Start/Stop (Admin uniquement) -->
+                        <button id="botToggleBtn" class="bot-toggle-btn state-loading" onclick="toggleBot()" disabled>
+                            <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+                            <span id="botToggleBtnText">Chargement...</span>
+                        </button>
+                    </div>
+
+                    <!-- Card 2 — Bot Control Crypto (Interactif) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                                <i data-lucide="bitcoin" class="w-5 h-5"></i>
+                            </div>
+                            <!-- Indicateur statut en temps réel -->
+                            <div id="cryptoBotStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800 border border-slate-700">
+                                <span id="cryptoBotStatusDot" class="bot-status-dot dot-inactive"></span>
+                                <span id="cryptoBotStatusText" class="text-xs font-bold text-slate-400">Chargement...</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-slate-400 text-xs mb-0.5">Statut du Bot</p>
+                            <h3 class="text-xl font-bold">BTC Scalper</h3>
+                            <p id="cryptoBotHeartbeatText" class="text-xs text-slate-500 mt-0.5">--</p>
+                        </div>
+                        <!-- Bouton Start/Stop (Admin uniquement) -->
+                        <button id="cryptoBotToggleBtn" class="bot-toggle-btn state-loading" onclick="toggleCryptoBot()" disabled>
+                            <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+                            <span id="cryptoBotToggleBtnText">Chargement...</span>
+                        </button>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-sky-500/10 rounded-full blur-xl"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-2 rounded-lg bg-sky-500/10 text-sky-400">
+                                <i data-lucide="wallet" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-slate-500 text-sm font-medium flex items-center gap-1">0.0%</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-1">Profit Total</p>
+                        <h3 class="text-3xl font-bold font-heading tracking-tight" id="dashTotalProfit">$0.00</h3>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="glass-card rounded-2xl p-5">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                                <i data-lucide="target" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-1">Taux de Réussite</p>
+                        <div class="flex items-end gap-3">
+                            <h3 class="text-3xl font-bold font-heading" id="dashWinRate">0%</h3>
+                            <div class="flex-1 mb-2">
+                                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                                    <div class="bg-gradient-to-r from-sky-400 to-purple-500 h-1.5 rounded-full" style="width: 0%" id="dashWinRateBar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="glass-card rounded-2xl p-5">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                                <i data-lucide="trending-down" class="w-5 h-5"></i>
+                            </div>
+                            <span class="text-slate-400 text-sm font-medium">Risque Faible</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-1">Drawdown Max</p>
+                        <div class="flex items-end gap-3">
+                            <h3 class="text-3xl font-bold font-heading" id="dashMaxDrawdown">0.0%</h3>
+                            <div class="flex-1 mb-2">
+                                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                                    <div class="bg-rose-500 h-1.5 rounded-full shadow-[0_0_8px_#ef4444]" style="width: 0%" id="dashMaxDrawdownBar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- MIDDLE SECTION: CHART + ACTIVITY -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    
+                    <!-- CHART PANEL -->
+                    <div class="glass-card rounded-2xl p-5 lg:col-span-2 flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="font-bold flex items-center gap-2">
+                                    GBPUSD <span class="text-slate-400 font-normal text-sm">Marché en Direct</span>
+                                </h3>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="px-2 py-1 bg-slate-800 rounded text-xs text-sky-400 font-medium">M5</span>
+                                <span class="px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">H1</span>
+                            </div>
+                        </div>
+                        
+                        <!-- TradingView Advanced Chart -->
+                        <div class="flex-1 w-full bg-slate-900/50 rounded-xl border border-slate-800 relative overflow-hidden min-h-[400px]">
+                            <!-- TradingView Widget BEGIN -->
+                            <div class="tradingview-widget-container" style="height:100%;width:100%">
+                              <div id="tradingview_gbpusd" style="height:100%;width:100%"></div>
+                              <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                              <script type="text/javascript">
+                              new TradingView.widget(
+                              {
+                              "autosize": true,
+                              "symbol": "FX:GBPUSD",
+                              "interval": "5",
+                              "timezone": "Etc/UTC",
+                              "theme": "dark",
+                              "style": "1",
+                              "locale": "fr",
+                              "enable_publishing": false,
+                              "backgroundColor": "rgba(15, 23, 42, 0)",
+                              "gridColor": "rgba(51, 65, 85, 0.2)",
+                              "hide_top_toolbar": false,
+                              "hide_legend": false,
+                              "save_image": false,
+                              "container_id": "tradingview_gbpusd",
+                              "toolbar_bg": "rgba(15, 23, 42, 1)"
+                            }
+                              );
+                              </script>
+                            </div>
+                            <!-- TradingView Widget END -->
+                        </div>
+                    </div>
+
+                    <!-- ACTIVITY PANEL -->
+                    <div class="glass-card rounded-2xl p-5">
+                        <h3 class="font-bold mb-5 text-sm">Activité Récente</h3>
+                        <div class="space-y-4" id="recentActivityContainer">
+                            
+                            <!-- Empty State -->
+                            <div id="recentActivityEmpty" class="flex flex-col items-center justify-center py-8 text-center">
+                                <div class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 mb-3">
+                                    <i data-lucide="activity" class="w-5 h-5"></i>
+                                </div>
+                                <h4 class="text-slate-300 font-medium mb-1">Aucune activité</h4>
+                                <p class="text-xs text-slate-500 max-w-[200px] mx-auto">Connectez votre compte MT5 et activez le bot pour commencer.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE TRADES TABLE -->
+                <div class="glass-card rounded-2xl p-5 overflow-hidden">
+                    <h3 class="font-bold mb-4 text-sm">Historique des Transactions en Direct</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700 text-sm">
+                                    <th class="pb-3 px-4 font-medium">Pair / Type</th>
+                                    <th class="pb-3 px-4 font-medium">Entrée</th>
+                                    <th class="pb-3 px-4 font-medium">TP</th>
+                                    <th class="pb-3 px-4 font-medium">SL</th>
+                                    <th class="pb-3 px-4 font-medium">Profit</th>
+                                    <th class="pb-3 px-4 font-medium text-right">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm" id="liveTradesBody">
+                                <tr>
+                                    <td colspan="6" class="py-12 text-center">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <i data-lucide="inbox" class="w-8 h-8 text-slate-600 mb-3"></i>
+                                            <p class="text-slate-400 font-medium">Aucune transaction enregistrée</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div> <!-- END TAB 1 -->
+
+
+            <!-- TAB 2: MT5 CONNECTION -->
+            <div id="tab-mt5" class="tab-content max-w-5xl mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold font-heading mb-2">Système de Connexion MT5</h1>
+                    <p class="text-slate-400">Connectez votre courtier en toute sécurité pour permettre à Vibe Trading d'exécuter des transactions automatisées.</p>
+                </div>
+
+                <!-- Locked State (No Active Subscription) -->
+                <div id="mt5-locked-container" class="hidden glass-card rounded-3xl p-8 text-center flex flex-col items-center justify-center border border-rose-500/30">
+                    <div class="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mb-4">
+                        <i data-lucide="lock" class="w-8 h-8 text-rose-400"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-2">Abonnement Requis</h2>
+                    <p class="text-slate-400 max-w-md mx-auto">Vous devez posséder un abonnement actif pour pouvoir connecter votre compte MetaTrader 5 au bot Vibe Trading.</p>
+                </div>
+
+                <!-- Not Connected State -->
+                <div id="mt5-form-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left: Form -->
+                    <div class="lg:col-span-2 glass-card rounded-3xl p-6 sm:p-10 relative overflow-hidden">
+                        <!-- Security banner -->
+                        <div class="absolute top-0 left-0 w-full p-2 bg-emerald-500/10 border-b border-emerald-500/20 text-center flex items-center justify-center gap-2">
+                            <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-xs text-emerald-400 font-medium tracking-wide">CRYPTAGE 256-BIT ACTIF</span>
+                        </div>
+
+                        <div class="mt-8 mb-6">
+                            <h2 class="text-xl font-bold mb-1">Entrez vos Identifiants MT5</h2>
+                            <p class="text-xs text-slate-400">Vos détails sont cryptés et ne sont jamais stockés en clair.</p>
+                        </div>
+
+                        <form id="mt5Form" class="space-y-5">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Broker Name</label>
+                                    <div class="relative">
+                                        <i data-lucide="briefcase" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                        <input type="text" id="mt5broker" placeholder="e.g. IC Markets, Exness" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Server Name</label>
+                                    <div class="relative">
+                                        <i data-lucide="globe" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                        <input type="text" id="mt5server" placeholder="e.g. ICMarkets-Live01" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">MT5 Login ID</label>
+                                    <div class="relative">
+                                        <i data-lucide="user-square" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                        <input type="text" id="mt5login" placeholder="Account Number" required class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Account Type</label>
+                                    <div class="relative">
+                                        <select id="mt5type" class="input-dark w-full rounded-xl px-4 py-3 text-sm appearance-none cursor-pointer">
+                                            <option>Live Account</option>
+                                            <option>Demo Account</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Investor Password (Read-Only) OR Trading Password</label>
+                                <div class="relative">
+                                    <i data-lucide="key" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                    <input type="password" id="mt5pwd" placeholder="Enter password" required class="input-dark w-full rounded-xl pl-10 pr-12 py-3 text-sm">
+                                    <button type="button" id="toggleMt5Pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-sky-400">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="connectMt5Btn" class="btn-gradient w-full py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 mt-6">
+                                <i data-lucide="link" class="w-5 h-5"></i>
+                                <span>Connect Account</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Instructions/Info -->
+                    <div class="space-y-6">
+                        <div class="glass-card rounded-2xl p-6 border-t-sky-500">
+                            <h3 class="font-bold flex items-center gap-2 mb-4">
+                                <i data-lucide="shield-alert" class="w-5 h-5 text-sky-400"></i> Security First
+                            </h3>
+                            <ul class="space-y-3 text-sm text-slate-400">
+                                <li class="flex gap-2 items-start">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                                    Your passwords are encrypted using AES-256 before storing.
+                                </li>
+                                <li class="flex gap-2 items-start">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                                    We use dedicated proxy servers to connect to your broker.
+                                </li>
+                                <li class="flex gap-2 items-start">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                                    You can disconnect your account instantly at any time.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected State (Hidden by default) -->
+                <div id="mt5-connected-container" class="hidden">
+                    <div class="glass-card border-2 border-emerald-500/20 rounded-3xl p-8 relative overflow-hidden">
+                        <div class="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                        
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                                    <i data-lucide="link-2" class="w-8 h-8 text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h2 id="connectedBrokerName" class="text-2xl font-bold font-heading">Broker</h2>
+                                        <span class="badge badge-success flex items-center gap-1 text-[10px]">
+                                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> CONNECTED
+                                        </span>
+                                    </div>
+                                    <p id="connectedAccountDetails" class="text-slate-400 text-sm">Account: ... • Server</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-3">
+                                <button onclick="showComingSoonModal('Paramètres', 'Les paramètres avancés de MT5 seront disponibles dans une prochaine mise à jour.')" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors" title="Edit Settings">
+                                    <i data-lucide="settings-2" class="w-5 h-5"></i>
+                                </button>
+                                <button id="disconnectBtn" class="px-4 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors font-medium text-sm flex items-center gap-2">
+                                    <i data-lucide="unlink" class="w-4 h-4"></i> Disconnect
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-8 border-t border-slate-700/50 relative z-10">
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Balance</p>
+                                <p id="connectedBalance" class="text-xl font-bold">Syncing...</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Equity</p>
+                                <p id="connectedEquity" class="text-xl font-bold text-sky-400">Syncing...</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Statut du Bot</p>
+                                <p class="text-lg font-bold text-emerald-400">TRADING ACTIVE</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Ping</p>
+                                <p class="text-lg font-bold">24ms</p>
+                            </div>
+                        </div>
+
+                        <!-- Sync Information Box -->
+                        <div class="mt-6 bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 flex gap-3 relative z-10">
+                            <i data-lucide="info" class="w-5 h-5 text-sky-400 shrink-0 mt-0.5"></i>
+                            <div>
+                                <h4 class="text-sm font-bold text-sky-400 mb-1">Synchronisation de la Balance</h4>
+                                <p class="text-xs text-sky-200/70">
+                                    Votre balance réelle s'affichera dès que le bot de trading Vibe aura établi sa première connexion avec votre compte MetaTrader 5 (cela peut prendre quelques minutes).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- END TAB 2 -->
+
+            <!-- TAB 3: SUBSCRIPTION -->
+            <div id="tab-billing" class="tab-content max-w-7xl mx-auto">
+                
+                <!-- Page Header -->
+                <div class="text-center mb-10 relative">
+                    <div class="inline-flex items-center justify-center p-3 bg-sky-500/10 rounded-2xl text-sky-400 mb-4 shadow-[0_0_20px_rgba(14,165,233,0.2)]">
+                        <i data-lucide="crown" class="w-8 h-8"></i>
+                    </div>
+                    <h1 class="text-3xl md:text-5xl font-bold font-heading mb-4 tracking-tight">Choisissez Votre <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600">Plan d'Abonnement</span></h1>
+                    <p class="text-slate-400 max-w-2xl mx-auto text-lg">Accédez au système de scalping IA GBPUSD de Vibe Trading et surveillez les transactions en direct depuis votre tableau de bord.</p>
+                </div>
+
+                <!-- Current Status -->
+                <div id="currentStatusCard" class="glass-card rounded-2xl p-6 mb-12 border-l-4 border-l-rose-500 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                        <div>
+                            <h3 class="text-slate-400 text-sm font-medium mb-1 uppercase tracking-wider">Statut Actuel</h3>
+                            <div class="flex items-center gap-3">
+                                <h2 id="currentStatusTitle" class="text-2xl font-bold">Aucun Plan Actif</h2>
+                                <span id="currentStatusBadge" class="badge px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1">
+                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> EXPIRÉ
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex gap-8">
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1">Date d'Activation</p>
+                                <p class="font-medium" id="activationDateDisplay">--</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1">Date d'Expiration</p>
+                                <p class="font-medium" id="expirationDateDisplay">--</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 mb-1">Jours Restants</p>
+                                <p class="font-medium text-rose-400" id="daysLeftDisplay">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
+                    
+                    <!-- STARTER PLAN -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col relative group">
+                        <div class="mb-5">
+                            <span class="text-sky-400 font-bold tracking-widest text-xs uppercase">Starter</span>
+                            <div class="flex items-end gap-2 mt-1">
+                                <h2 class="text-4xl font-bold font-heading">$50</h2>
+                                <span class="text-slate-400 mb-1 text-sm">/ 1 Mois</span>
+                            </div>
+                            <p class="text-xs text-sky-400/80 font-medium mt-1">~ 6,700 HTG</p>
+                        </div>
+                        <ul class="space-y-3 mb-6 flex-1 text-slate-300 text-sm">
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Tableau de Bord GBPUSD en Direct</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Transactions en Temps Réel</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Signaux Session de Londres</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Support Standard</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Gestion des Risques</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Accès Mobile</li>
+                        </ul>
+                        <button class="w-full py-3 rounded-xl border border-sky-500/30 text-sky-400 font-bold hover:bg-sky-500/10 transition-colors open-payment-modal" data-plan="Starter" data-price="50">S'abonner Maintenant</button>
+                    </div>
+
+                    <!-- PRO PLAN (Highlighted) -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col relative transform md:-translate-y-2 shadow-[0_0_30px_rgba(14,165,233,0.15)] border-t border-sky-400">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-sky-400 to-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Le Plus Populaire</div>
+                        <div class="mb-5 mt-1">
+                            <span class="text-white font-bold tracking-widest text-xs uppercase">Pro</span>
+                            <div class="flex items-end gap-2 mt-1">
+                                <h2 class="text-4xl font-bold font-heading text-white">$120</h2>
+                                <span class="text-slate-400 mb-1 text-sm">/ 3 Mois</span>
+                            </div>
+                            <p class="text-xs text-sky-400 font-medium mt-1">~ 16,080 HTG</p>
+                        </div>
+                        <ul class="space-y-3 mb-6 flex-1 text-slate-300 text-sm">
+                            <li class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4 text-sky-400"></i> <strong class="text-white">Tout dans Starter</strong></li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Analyses Avancées</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Support Prioritaire</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Statistiques de Performance</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Mises à Jour Rapides</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Tableau de Bord Premium</li>
+                        </ul>
+                        <button class="btn-gradient w-full py-3 rounded-xl text-white font-bold open-payment-modal" data-plan="Pro" data-price="120">Obtenir l'Accès Pro</button>
+                    </div>
+
+                    <!-- VIP PLAN (Large Glow) -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col relative overflow-hidden border-2 border-[#8b5cf6]/30 shadow-[0_0_20px_rgba(139,92,246,0.2)]">
+                        <div class="absolute right-0 bottom-0 w-32 h-32 bg-[#8b5cf6]/20 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="mb-5">
+                            <span class="text-[#8b5cf6] font-bold tracking-widest text-xs uppercase">VIP Elite</span>
+                            <div class="flex items-end gap-2 mt-1">
+                                <h2 class="text-4xl font-bold font-heading">$200</h2>
+                                <span class="text-slate-400 mb-1 text-sm">/ 6 Mois</span>
+                            </div>
+                            <p class="text-xs text-[#8b5cf6]/80 font-medium mt-1">~ 26,800 HTG</p>
+                        </div>
+                        <ul class="space-y-3 mb-6 flex-1 text-slate-300 relative z-10 text-sm">
+                            <li class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4 text-[#8b5cf6]"></i> <strong class="text-white">Tout dans Pro</strong></li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Accès Trading VIP</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Notifications en Direct</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Support VIP</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Fonctionnalités Exclusives</li>
+                            <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Assistance Dédiée</li>
+                        </ul>
+                        <button class="w-full py-3 rounded-xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/50 text-[#8b5cf6] font-bold hover:bg-[#8b5cf6]/20 transition-colors shadow-[0_0_15px_rgba(139,92,246,0.3)] relative z-10 open-payment-modal" data-plan="VIP" data-price="200">Rejoindre VIP</button>
+                    </div>
+
+                </div>
+                
+                <!-- Historique des abonnements -->
+                <div class="mt-16">
+                    <h2 class="text-2xl font-bold font-heading mb-6 flex items-center gap-3">
+                        <i data-lucide="history" class="w-6 h-6 text-sky-400"></i> Historique des Abonnements
+                    </h2>
+                    <div class="glass-card rounded-2xl overflow-hidden border border-slate-700/50">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-slate-300">
+                                <thead class="text-xs uppercase bg-slate-800/50 text-slate-400 border-b border-slate-700">
+                                    <tr>
+                                        <th class="px-6 py-4 font-medium">Plan</th>
+                                        <th class="px-6 py-4 font-medium">Date d'Activation</th>
+                                        <th class="px-6 py-4 font-medium">Date d'Expiration</th>
+                                        <th class="px-6 py-4 font-medium text-right">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subscriptionHistoryBody" class="divide-y divide-slate-700/50">
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-8 text-center text-slate-500">
+                                            Aucun historique d'abonnement trouvé.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- END TAB 3 -->
+
+            <!-- TAB 4: SETTINGS -->
+            <div id="tab-settings" class="tab-content max-w-7xl mx-auto">
+                
+                <!-- Page Header -->
+                <div class="mb-8 border-b border-slate-700/50 pb-6">
+                    <h1 class="text-3xl font-bold font-heading mb-2 relative inline-block">
+                        Paramètres du Compte
+                        <div class="absolute -bottom-2 left-0 w-1/2 h-1 bg-gradient-to-r from-sky-400 to-blue-600 rounded-full shadow-[0_0_10px_#0ea5e9]"></div>
+                    </h1>
+                    <p class="text-slate-400 mt-4">Gérez votre compte Vibe Trading, la sécurité, la connexion MT5 et les préférences.</p>
+                </div>
+
+                <div class="flex flex-col lg:flex-row gap-8">
+                    
+                    <!-- Internal Settings Sidebar -->
+                    <div class="w-full lg:w-64 shrink-0">
+                        <div class="glass-card rounded-2xl p-4 sticky top-4 flex flex-col gap-2">
+                            <button class="settings-nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-white bg-sky-500/10 shadow-[inset_2px_0_0_#0ea5e9]" data-setting-target="setting-profile">
+                                <i data-lucide="user" class="w-4 h-4 text-sky-400"></i> Profil
+                            </button>
+                            <button class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-white" data-setting-target="setting-security">
+                                <i data-lucide="shield" class="w-4 h-4 text-slate-400"></i> Sécurité
+                            </button>
+                            <button class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-white" data-setting-target="setting-notifications">
+                                <i data-lucide="bell" class="w-4 h-4 text-slate-400"></i> Notifications
+                            </button>
+                            <button class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-white" data-setting-target="setting-appearance">
+                                <i data-lucide="palette" class="w-4 h-4 text-slate-400"></i> Apparence
+                            </button>
+                            <button class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-white" data-setting-target="setting-privacy">
+                                <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i> Confidentialité
+                            </button>
+                            <div class="my-2 border-t border-slate-700/50"></div>
+                            <!-- Shortcuts to other main tabs -->
+                            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-sky-400" onclick="document.querySelector('[data-target=\'tab-mt5\']').click()">
+                                <i data-lucide="server" class="w-4 h-4 text-emerald-400"></i> Connexion MT5
+                            </button>
+                            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-sky-400" onclick="document.querySelector('[data-target=\'tab-billing\']').click()">
+                                <i data-lucide="credit-card" class="w-4 h-4 text-[#8b5cf6]"></i> Abonnement
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Internal Settings Content -->
+                    <div class="flex-1">
+                        
+                        <!-- PROFILE SETTINGS -->
+                        <div id="setting-profile" class="setting-content block animate-[fadeInUp_0.3s_ease_forwards]">
+                            <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="user" class="text-sky-400"></i> Profile Information</h2>
+                                
+                                <!-- Avatar Upload -->
+                                <div class="flex items-center gap-6 mb-8 p-4 rounded-2xl bg-slate-800/30 border border-slate-700/50">
+                                    <div class="w-20 h-20 rounded-full bg-slate-800 border-2 border-sky-500 p-1 relative group cursor-pointer">
+                                        <img id="settingsUserAvatar" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-full h-full rounded-full">
+                                        <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold">Profile Picture</h3>
+                                        <p class="text-xs text-slate-400 mb-3">PNG, JPG up to 2MB. Recommended 256x256px.</p>
+                                        <div class="flex gap-3">
+                                            <button class="px-4 py-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/30 text-sm font-medium hover:bg-sky-500/20 transition-colors">Change Image</button>
+                                            <button class="px-4 py-2 rounded-lg text-slate-400 text-sm font-medium hover:text-rose-400 transition-colors">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Nom Complet</label>
+                                        <div class="relative">
+                                            <i data-lucide="user" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                            <input id="settingsFullName" type="text" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Nom d'utilisateur</label>
+                                        <div class="relative">
+                                            <i data-lucide="at-sign" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                            <input id="settingsUsername" type="text" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Adresse Email</label>
+                                        <div class="relative">
+                                            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                            <input id="settingsEmail" type="email" value="" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm" readonly>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1">Numéro de Téléphone</label>
+                                        <div class="relative">
+                                            <i data-lucide="phone" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                            <input type="tel" placeholder="+1 (555) 000-0000" class="input-dark w-full rounded-xl pl-10 pr-4 py-3 text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-8 flex justify-end gap-3">
+                                    <button class="px-6 py-3 rounded-xl text-slate-300 font-medium hover:bg-slate-800 transition-colors">Cancel</button>
+                                    <button class="btn-gradient px-8 py-3 rounded-xl text-white font-bold">Enregistrer les Modifications</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECURITY SETTINGS -->
+                        <div id="setting-security" class="setting-content hidden animate-[fadeInUp_0.3s_ease_forwards]">
+                            <div class="space-y-6">
+                                <!-- Passwords -->
+                                <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                    <h2 class="text-xl font-bold mb-1 flex items-center gap-2"><i data-lucide="shield" class="text-sky-400"></i> Change Password</h2>
+                                    <p class="text-sm text-slate-400 mb-6">Your account security is protected with encrypted authentication.</p>
+                                    
+                                    <div class="space-y-5">
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-400 mb-1">Mot de Passe Actuel</label>
+                                            <input type="password" class="input-dark w-full rounded-xl px-4 py-3 text-sm">
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div>
+                                                <label class="block text-xs font-medium text-slate-400 mb-1">Nouveau Mot de Passe</label>
+                                                <input type="password" class="input-dark w-full rounded-xl px-4 py-3 text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-slate-400 mb-1">Confirm New Password</label>
+                                                <input type="password" class="input-dark w-full rounded-xl px-4 py-3 text-sm">
+                                            </div>
+                                        </div>
+                                        <button class="px-6 py-3 rounded-xl bg-slate-800 text-white font-medium border border-slate-700 hover:bg-slate-700 transition-colors">Mettre à Jour le Mot de Passe</button>
+                                    </div>
+                                </div>
+
+                                <!-- 2FA -->
+                                <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h2 class="text-lg font-bold mb-1 flex items-center gap-2">Two-Factor Authentication (2FA)</h2>
+                                            <p class="text-sm text-slate-400">Add an extra layer of security to your account.</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Active Sessions -->
+                                <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                    <h2 class="text-lg font-bold mb-4">Recent Login Activity</h2>
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                                            <div class="flex items-center gap-4">
+                                                <div class="p-2 rounded-lg bg-sky-500/10 text-sky-400"><i data-lucide="monitor" class="w-5 h-5"></i></div>
+                                                <div>
+                                                    <p class="font-medium text-sm">Windows • Chrome</p>
+                                                    <p class="text-xs text-slate-400">Miami, USA • Active now</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-1 rounded">CURRENT</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NOTIFICATIONS SETTINGS -->
+                        <div id="setting-notifications" class="setting-content hidden animate-[fadeInUp_0.3s_ease_forwards]">
+                            <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="bell" class="text-sky-400"></i> Notification Preferences</h2>
+                                
+                                <div class="space-y-6">
+                                    <!-- Toggle Item -->
+                                    <div class="flex items-center justify-between border-b border-slate-700/50 pb-6">
+                                        <div>
+                                            <h3 class="font-medium">Trade Open Alerts</h3>
+                                            <p class="text-xs text-slate-400 mt-1">Get notified immediately when the bot opens a new position.</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Toggle Item -->
+                                    <div class="flex items-center justify-between border-b border-slate-700/50 pb-6">
+                                        <div>
+                                            <h3 class="font-medium">Trade Close & Profit</h3>
+                                            <p class="text-xs text-slate-400 mt-1">Receive alerts when a trade hits TP/SL or is closed.</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Toggle Item -->
+                                    <div class="flex items-center justify-between border-b border-slate-700/50 pb-6">
+                                        <div>
+                                            <h3 class="font-medium">Email Notifications</h3>
+                                            <p class="text-xs text-slate-400 mt-1">Receive daily performance summaries via email.</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Toggle Item -->
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h3 class="font-medium">Push Notifications</h3>
+                                            <p class="text-xs text-slate-400 mt-1">Enable browser push notifications for real-time updates.</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- APPEARANCE SETTINGS -->
+                        <div id="setting-appearance" class="setting-content hidden animate-[fadeInUp_0.3s_ease_forwards]">
+                            <div class="glass-card rounded-3xl p-6 sm:p-10">
+                                <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="palette" class="text-sky-400"></i> Appearance</h2>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                                    <!-- Theme Selector -->
+                                    <div class="p-4 rounded-xl border-2 border-sky-500 bg-slate-800/50 cursor-pointer relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-sky-500/5 pointer-events-none"></div>
+                                        <i data-lucide="moon" class="w-6 h-6 text-sky-400 mb-3"></i>
+                                        <h3 class="font-bold">Ultra Dark Mode</h3>
+                                        <p class="text-xs text-slate-400">Deep navy with neon accents.</p>
+                                        <div class="absolute top-4 right-4 w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center">
+                                            <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="lightModeBtn" class="p-4 rounded-xl border-2 border-slate-700 bg-slate-800/30 cursor-pointer hover:border-slate-500 transition-colors">
+                                        <i data-lucide="sun" class="w-6 h-6 text-slate-400 mb-3"></i>
+                                        <h3 class="font-bold text-slate-300">Mode Clair</h3>
+                                        <p class="text-xs text-slate-500">Bientôt disponible dans la V2.</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between border-t border-slate-700/50 pt-6">
+                                    <div>
+                                        <h3 class="font-medium">Neon Glow Effects</h3>
+                                        <p class="text-xs text-slate-400 mt-1">Enable intensive glow rendering (may impact performance on old devices).</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 peer-checked:shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PRIVACY SETTINGS -->
+                        <div id="setting-privacy" class="setting-content hidden animate-[fadeInUp_0.3s_ease_forwards]">
+                            <div class="glass-card rounded-3xl p-6 sm:p-10 border-t border-rose-500/20">
+                                <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="lock" class="text-rose-400"></i> Privacy & Data</h2>
+                                
+                                <p class="text-sm text-slate-400 mb-8">Manage how your data is used and permanently delete your account.</p>
+
+                                <div class="flex flex-col sm:flex-row gap-4">
+                                    <button class="px-6 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium">
+                                        <i data-lucide="download" class="w-4 h-4"></i> Download My Data
+                                    </button>
+                                    <button class="px-6 py-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 hover:bg-rose-500/20 transition-colors flex items-center justify-center gap-2 text-sm font-medium">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Account
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div> <!-- END TAB 4 -->
+
+            <!-- TAB: TRADES -->
+            <div id="tab-trades" class="tab-content max-w-7xl mx-auto space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold font-heading">Live Trades</h1>
+                    <p class="text-slate-400 text-sm">Historique complet de vos transactions en temps r&eacute;el</p>
+                </div>
+                <div class="glass-card rounded-2xl p-5 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700 text-sm">
+                                    <th class="pb-3 px-4 font-medium">Pair / Type</th>
+                                    <th class="pb-3 px-4 font-medium">Entr&eacute;e</th>
+                                    <th class="pb-3 px-4 font-medium">TP</th>
+                                    <th class="pb-3 px-4 font-medium">SL</th>
+                                    <th class="pb-3 px-4 font-medium">Profit</th>
+                                    <th class="pb-3 px-4 font-medium text-right">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullTradesBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PERFORMANCE -->
+            <div id="tab-stats" class="tab-content max-w-7xl mx-auto space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold font-heading">Performance</h1>
+                    <p class="text-slate-400 text-sm">Analyses avanc&eacute;es et statistiques de votre compte</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Total Trades</h3>
+                        <p id="statsTotalTrades" class="text-3xl font-bold text-white">0</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Trades Gagnants</h3>
+                        <p id="statsWonTrades" class="text-3xl font-bold text-emerald-400">0</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-slate-400 text-sm mb-2">Trades Perdants</h3>
+                        <p id="statsLostTrades" class="text-3xl font-bold text-rose-400">0</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Statistiques Globales</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center pb-4 border-b border-slate-700/50">
+                            <span class="text-slate-400">Profit Net Total</span>
+                            <span id="statsTotalProfit" class="font-bold text-lg">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pb-4 border-b border-slate-700/50">
+                            <span class="text-slate-400">Taux de R&eacute;ussite (Win Rate)</span>
+                            <span id="statsWinRate" class="font-bold text-lg">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder for other tabs -->
+            <div id="tab-empty" class="tab-content max-w-7xl mx-auto text-center py-20 hidden">
+            </div>
+
+            <!-- TAB: FAQ -->
+            <div id="tab-faq" class="tab-content max-w-4xl mx-auto space-y-6">
+                <div class="mb-8 border-b border-slate-700/50 pb-6">
+                    <h1 class="text-3xl font-bold font-heading mb-2 relative inline-block">
+                        Foire Aux Questions
+                        <div class="absolute -bottom-2 left-0 w-1/2 h-1 bg-gradient-to-r from-sky-400 to-blue-600 rounded-full shadow-[0_0_10px_#0ea5e9]"></div>
+                    </h1>
+                    <p class="text-slate-400 mt-4">Trouvez rapidement des réponses à vos questions sur le fonctionnement du bot et de la plateforme.</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- FAQ 1 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-sky-400"></i>
+                            Comment le bot fonctionne-t-il exactement ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Notre bot utilise une stratégie avancée de "Break & Retest". Il analyse les zones de Supply & Demand (Offre et Demande) et attend une confirmation avec les Moyennes Mobiles (SMA 50 et EMA 200). Une fois les conditions réunies, il ouvre un trade automatiquement et gère le risque pour vous.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 2 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-emerald-400"></i>
+                            Quel est le risque par transaction ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Le bot est configuré de manière extrêmement sécurisée. Il ne prendra jamais plus de 3 trades par jour au total. S'il enregistre 2 pertes consécutives ou atteint un objectif spécifique, il s'arrête de trader pour protéger votre capital.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 3 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-purple-400"></i>
+                            Puis-je utiliser un compte Prop Firm ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Oui, absolument ! Le bot Vibe Trading est optimisé pour respecter les règles strictes des sociétés de financement (Prop Firms) comme FTMO ou FundedNext (Stop Loss obligatoire, pas de Grid, pas de Martingale, risque maîtrisé).
+                        </p>
+                    </div>
+
+                    <!-- FAQ 4 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-rose-400"></i>
+                            Comment connecter mon compte MetaTrader 5 ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Il vous suffit de vous rendre dans l'onglet "Connexion MT5" du menu de gauche. Entrez votre numéro de compte (Login), votre mot de passe, le nom exact de votre serveur (Broker) et cliquez sur Connecter.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 5 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
+                            Sur quelles paires de devises le bot trade-t-il ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Notre intelligence artificielle est actuellement optimisée exclusivement pour la paire **GBP/USD**. Cette spécialisation permet au bot d'avoir une lecture chirurgicale des zones d'offre et de demande spécifiques à cette devise.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 6 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-indigo-400"></i>
+                            Le bot trade-t-il 24h/24 et 7j/7 ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Non. Pour maximiser la sécurité de votre capital et éviter les "faux signaux" liés au manque de volatilité, le bot est programmé pour ne trader que durant la session de Londres et le début de New York (de 06h00 à 17h00 heure de Londres).
+                        </p>
+                    </div>
+
+                    <!-- FAQ 7 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-teal-400"></i>
+                            Dois-je laisser mon ordinateur allumé ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Pas du tout ! Vibe Trading est une plateforme 100% Cloud (SaaS). Une fois votre compte MT5 connecté via le tableau de bord, le bot tourne de manière autonome sur nos serveurs haute performance. Vous pouvez même éteindre votre téléphone.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 8 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-fuchsia-400"></i>
+                            Avez-vous accès à mes fonds ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Absolument pas. Votre argent reste entièrement sécurisé chez le broker (courtier) de votre choix ou sur votre Prop Firm. Vibe Trading n'a qu'un accès pour "placer des trades" via vos identifiants MT5, mais aucune autorisation de dépôt ou de retrait.
+                        </p>
+                    </div>
+
+                    <!-- FAQ 9 -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-orange-400"></i>
+                            Comment puis-je annuler mon abonnement ?
+                        </h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            L'abonnement est sans engagement. Vous pouvez l'annuler à tout moment en un clic depuis l'onglet "Abonnement". Dès l'annulation, le bot arrêtera de placer de nouvelles positions à la fin de votre cycle de facturation actuel.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: CONTACT -->
+            <div id="tab-contact" class="tab-content max-w-3xl mx-auto space-y-6">
+                <div class="mb-8 border-b border-slate-700/50 pb-6">
+                    <h1 class="text-3xl font-bold font-heading mb-2 relative inline-block">
+                        Contactez-nous
+                        <div class="absolute -bottom-2 left-0 w-1/2 h-1 bg-gradient-to-r from-sky-400 to-blue-600 rounded-full shadow-[0_0_10px_#0ea5e9]"></div>
+                    </h1>
+                    <p class="text-slate-400 mt-4">Une question spécifique ou besoin d'assistance technique ? L'équipe Vibe Trading est là pour vous aider.</p>
+                </div>
+
+                <div class="glass-card rounded-3xl p-8 sm:p-10">
+                    <form onsubmit="event.preventDefault(); showComingSoonModal('Message Envoyé', 'Merci de nous avoir contactés. Notre équipe vous répondra dans les plus brefs délais.'); this.reset();" class="space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <!-- Nom -->
+                            <div class="input-group">
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Nom Complet</label>
+                                <input type="text" required placeholder="John Doe" class="input-field w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors">
+                            </div>
+                            <!-- Email -->
+                            <div class="input-group">
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Adresse Email</label>
+                                <input type="email" required placeholder="john@example.com" class="input-field w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors">
+                            </div>
+                        </div>
+
+                        <!-- Sujet -->
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Sujet de votre demande</label>
+                            <select class="input-field w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors appearance-none">
+                                <option value="support">Support Technique (Bug, MT5)</option>
+                                <option value="billing">Question sur l'Abonnement</option>
+                                <option value="partnership">Partenariat / Affiliation</option>
+                                <option value="other">Autre</option>
+                            </select>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Votre Message</label>
+                            <textarea required rows="5" placeholder="Expliquez-nous comment nous pouvons vous aider..." class="input-field w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors resize-none"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)] hover:shadow-[0_0_30px_rgba(14,165,233,0.5)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group">
+                            <span>Envoyer le Message</span>
+                            <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- PAYMENT MODAL (Hidden by default) -->
+    <div id="paymentModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-md" id="paymentBackdrop"></div>
+        
+        <!-- Modal Content -->
+        <div class="glass-card w-[90%] max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-8 relative z-10 transform scale-95 transition-transform duration-300" id="paymentModalContent">
+            
+            <!-- Close btn -->
+            <button id="closePaymentBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <div class="inline-flex w-12 h-12 rounded-full bg-sky-500/10 border border-sky-500/20 items-center justify-center text-sky-400 mb-3 shadow-[0_0_15px_rgba(14,165,233,0.2)]">
+                    <i data-lucide="credit-card" class="w-6 h-6"></i>
+                </div>
+                <h2 class="text-2xl font-bold font-heading mb-1">Compléter le Paiement</h2>
+                <p class="text-slate-400 text-sm">Vous vous abonnez au plan <span id="modalPlanName" class="text-white font-bold">Pro</span> Plan (<span id="modalPlanPrice" class="text-sky-400 font-bold">$120</span>).</p>
+            </div>
+
+            <!-- Form Container -->
+            <div id="paymentFormContainer">
+                <!-- Payment Methods -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <input type="hidden" id="selectedPaymentMethod" value="" required>
+                    <!-- Moncash -->
+                    <div id="methodMoncash" class="payment-method-card glass-panel p-3 rounded-xl border-sky-500/30 bg-sky-500/5 relative overflow-hidden cursor-pointer hover:border-sky-400 transition-colors border-2 border-transparent">
+                        <div class="absolute -right-4 -bottom-4 w-12 h-12 bg-rose-500/20 blur-xl rounded-full"></div>
+                        <div class="flex flex-col relative z-10 pointer-events-none">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="smartphone" class="w-4 h-4 text-rose-500"></i>
+                                    <span class="font-bold text-sm">Moncash</span>
+                                </div>
+                                <i data-lucide="check-circle" class="w-4 h-4 text-sky-400 opacity-0 transition-opacity" id="checkMoncash"></i>
+                            </div>
+                            <span class="text-lg font-heading font-bold text-slate-300 transition-colors">3620-3465</span>
+                        </div>
+                    </div>
+                    <!-- Natcash -->
+                    <div id="methodNatcash" class="payment-method-card glass-panel p-3 rounded-xl border-emerald-500/30 bg-emerald-500/5 relative overflow-hidden cursor-pointer hover:border-emerald-400 transition-colors border-2 border-transparent">
+                        <div class="absolute -right-4 -bottom-4 w-12 h-12 bg-blue-500/20 blur-xl rounded-full"></div>
+                        <div class="flex flex-col relative z-10 pointer-events-none">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="smartphone" class="w-4 h-4 text-blue-500"></i>
+                                    <span class="font-bold text-sm">Natcash</span>
+                                </div>
+                                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 opacity-0 transition-opacity" id="checkNatcash"></i>
+                            </div>
+                            <span class="text-lg font-heading font-bold text-slate-300 transition-colors">4239-8022</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="text-xs text-slate-400 mb-5 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 flex gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-sky-400 shrink-0"></i>
+                    <p>Veuillez envoyer le montant exact à un des numéros ci-dessus. Ensuite, remplissez le formulaire et téléchargez la capture de votre reçu.</p>
+                </div>
+
+                <!-- Form Inputs -->
+                <form id="paymentForm" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider font-medium text-slate-400 mb-1">Nom Complet</label>
+                            <div class="relative">
+                                <i data-lucide="user" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" placeholder="Jean Dupont" required class="input-dark w-full rounded-xl pl-9 pr-3 py-2 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider font-medium text-slate-400 mb-1">Montant Envoyé (USD)</label>
+                            <div class="relative">
+                                <i data-lucide="dollar-sign" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="number" id="payAmountInput" required readonly class="input-dark w-full rounded-xl pl-9 pr-3 py-2 text-sm opacity-70 cursor-not-allowed">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider font-medium text-slate-400 mb-1">Télécharger la Preuve de Paiement</label>
+                        <input type="file" id="receiptInput" class="hidden" accept="image/*,.pdf">
+                        <div id="dropzoneDiv" onclick="document.getElementById('receiptInput').click()" class="w-full h-24 border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl bg-slate-800/30 flex flex-col items-center justify-center text-slate-400 transition-colors cursor-pointer group">
+                            <i data-lucide="upload-cloud" class="w-6 h-6 mb-1 group-hover:text-sky-400 transition-colors"></i>
+                            <span id="dropzoneText" class="text-xs font-medium px-4 text-center">Cliquez ou glissez le reçu ici</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitPaymentBtn" class="btn-gradient w-full py-3 rounded-xl font-bold flex justify-center items-center gap-2 mt-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        <span class="text-sm">Soumettre la Vérification</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Success / Pending State -->
+            <div id="paymentPendingContainer" class="hidden text-center py-8">
+                <div class="mb-4 relative">
+                    <div class="absolute inset-0 bg-sky-500/20 blur-xl rounded-full"></div>
+                    <i data-lucide="clock" class="w-16 h-16 text-sky-400 relative z-10 mx-auto"></i>
+                </div>
+                <h2 class="text-3xl font-bold font-heading mb-2">Vérification en Cours</h2>
+                <p class="text-slate-400 max-w-md mx-auto mb-8">Notre équipe vérifiera votre paiement et activera votre abonnement sous peu. Cela prend généralement de 5 à 15 minutes.</p>
+                <button id="returnToDashboardBtn" class="px-8 py-3 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors">Return to Dashboard</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Coming Soon Modal -->
+    <div id="comingSoonModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeComingSoonModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="glass-card rounded-3xl w-full max-w-sm p-6 relative z-10 border border-sky-500/30 transform scale-95 transition-transform duration-300 shadow-2xl">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center mb-4 border-2 border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.3)]">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-sky-400"></i>
+                </div>
+                <h3 id="comingSoonTitle" class="text-xl font-bold font-heading mb-2 text-white">Bientôt Disponible</h3>
+                <p id="comingSoonMsg" class="text-slate-400 text-sm mb-6 leading-relaxed">Cette fonctionnalité sera ajoutée dans une future mise à jour.</p>
+                <button onclick="closeComingSoonModal()" class="btn-gradient w-full py-2.5 rounded-xl font-bold flex justify-center items-center gap-2">
+                    <span>Compris !</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Coming Soon Modal logic
+        function showComingSoonModal(title, msg) {
+            document.getElementById('comingSoonTitle').innerText = title;
+            document.getElementById('comingSoonMsg').innerText = msg;
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.remove('hidden');
+            // Allow display:flex to render before changing opacity/scale for transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('.glass-card').classList.remove('scale-95');
+                modal.querySelector('.glass-card').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeComingSoonModal() {
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('.glass-card').classList.remove('scale-100');
+            modal.querySelector('.glass-card').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 1. Sidebar Toggle (Mobile)
+        const sidebar = document.getElementById('sidebar');
+        const openSidebarBtn = document.getElementById('openSidebarBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('hidden');
+        }
+
+        openSidebarBtn.addEventListener('click', toggleSidebar);
+        closeSidebarBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // 2. Tab Navigation
+        const navItems = document.querySelectorAll('.nav-item[data-target]');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (item.getAttribute('href') !== '#') return; // Ignore logout link
+                e.preventDefault();
+                
+                // Remove active from all navs
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+
+                // Hide all tabs
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                // Show target tab
+                const targetId = item.getAttribute('data-target');
+                const targetTab = document.getElementById(targetId);
+                
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                } else {
+                    document.getElementById('tab-empty').classList.add('active');
+                }
+
+                // Close sidebar on mobile
+                if(window.innerWidth < 1024) {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.add('hidden');
+                }
+            });
+        });
+
+        // 2.5 Header Plan Badge to Billing Tab
+        const headerPlanBadge = document.getElementById('headerPlanBadge');
+        if(headerPlanBadge) {
+            headerPlanBadge.addEventListener('click', () => {
+                const billingNav = document.querySelector('.nav-item[data-target="tab-billing"]');
+                if(billingNav) {
+                    billingNav.click();
+                }
+            });
+        }
+
+        // 3. MT5 Form Interaction
+        const mt5Form = document.getElementById('mt5Form');
+        const formContainer = document.getElementById('mt5-form-container');
+        const connectedContainer = document.getElementById('mt5-connected-container');
+        const connectBtn = document.getElementById('connectMt5Btn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sidebarMT5Dot = document.getElementById('sidebarMT5Dot');
+        const toggleMt5Pwd = document.getElementById('toggleMt5Pwd');
+        const mt5pwd = document.getElementById('mt5pwd');
+
+        toggleMt5Pwd.addEventListener('click', () => {
+            const type = mt5pwd.type === 'password' ? 'text' : 'password';
+            mt5pwd.type = type;
+            toggleMt5Pwd.innerHTML = `<i data-lucide="${type === 'password' ? 'eye' : 'eye-off'}" class="w-4 h-4"></i>`;
+            lucide.createIcons();
+        });
+
+        mt5Form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Loading state
+            const originalText = connectBtn.innerHTML;
+            connectBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span>Connecting securely...</span>`;
+            connectBtn.disabled = true;
+            lucide.createIcons();
+
+            // Fetch field values
+            const broker = document.getElementById('mt5broker').value;
+            const loginId = document.getElementById('mt5login').value;
+            const password = document.getElementById('mt5pwd').value;
+            const server = document.getElementById('mt5server').value;
+            const type = document.getElementById('mt5type').value;
+
+            try {
+                // Get Current User ID
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Non connecté");
+
+                // Save to Supabase
+                const { data, error } = await supabaseClient
+                    .from('mt5_accounts')
+                    .insert([{
+                        user_id: session.user.id,
+                        broker_name: broker,
+                        login_id: loginId,
+                        encrypted_password: password, // Note: Frontend relies on HTTPS + DB RLS for transit security
+                        server_name: server,
+                        account_type: type,
+                        status: 'CONNECTED'
+                    }]);
+
+                if (error) throw error;
+
+                // Success UI Update
+                document.getElementById('connectedBrokerName').innerText = broker;
+                document.getElementById('connectedAccountDetails').innerText = `Account: ${loginId} • ${server}`;
+
+                formContainer.classList.add('hidden');
+                connectedContainer.classList.remove('hidden');
+                // Update sidebar dot
+                sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
+                sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
+                
+                // Loading State
+                document.getElementById('connectedBalance').innerText = 'Syncing...';
+                document.getElementById('connectedEquity').innerText = 'Syncing...';
+                document.getElementById('connectedBalance').classList.remove('text-emerald-400');
+                
+                // Real data will be fetched on next page reload or via realtime update
+
+                // Reset button
+                connectBtn.innerHTML = originalText;
+                connectBtn.disabled = false;
+                mt5Form.reset();
+                lucide.createIcons();
+
+            } catch (err) {
+                console.error("MT5 Error:", err);
+                const errorMsg = err.message || JSON.stringify(err);
+                alert("Erreur lors de la sauvegarde: " + errorMsg);
+                connectBtn.innerHTML = originalText;
+                connectBtn.disabled = false;
+                lucide.createIcons();
+            }
+        });
+
+        disconnectBtn.addEventListener('click', async () => {
+            if(confirm("Are you sure you want to disconnect your MT5 account? The bot will stop trading immediately.")) {
+                try {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if(session) {
+                        await supabaseClient
+                            .from('mt5_accounts')
+                            .delete()
+                            .eq('user_id', session.user.id);
+                    }
+                    
+                    connectedContainer.classList.add('hidden');
+                    formContainer.classList.remove('hidden');
+                    
+                    // Revert sidebar dot
+                    sidebarMT5Dot.classList.replace('bg-emerald-400', 'bg-rose-500');
+                    sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#34d399]', 'shadow-[0_0_8px_#ef4444]');
+                } catch(err) {
+                    console.error("Disconnect Error:", err);
+                    alert("Erreur lors de la déconnexion.");
+                }
+            }
+        });
+
+        // 4. Payment Modal Logic
+        const paymentModal = document.getElementById('paymentModal');
+        const paymentModalContent = document.getElementById('paymentModalContent');
+        const closePaymentBtn = document.getElementById('closePaymentBtn');
+        const paymentBackdrop = document.getElementById('paymentBackdrop');
+        const openPaymentBtns = document.querySelectorAll('.open-payment-modal');
+        
+        const modalPlanName = document.getElementById('modalPlanName');
+        const modalPlanPrice = document.getElementById('modalPlanPrice');
+        const payAmountInput = document.getElementById('payAmountInput');
+        
+        const paymentForm = document.getElementById('paymentForm');
+        const paymentFormContainer = document.getElementById('paymentFormContainer');
+        const paymentPendingContainer = document.getElementById('paymentPendingContainer');
+        const submitPaymentBtn = document.getElementById('submitPaymentBtn');
+        const returnToDashboardBtn = document.getElementById('returnToDashboardBtn');
+
+        function openModal(plan, price) {
+            modalPlanName.innerText = plan;
+            modalPlanPrice.innerText = `$${price}`;
+            payAmountInput.value = price;
+            
+            paymentModal.classList.remove('hidden');
+            // Slight delay to allow display:block to apply before animating opacity
+            setTimeout(() => {
+                paymentModal.classList.remove('opacity-0');
+                paymentModalContent.classList.remove('scale-95');
+                paymentModalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            paymentModal.classList.add('opacity-0');
+            paymentModalContent.classList.remove('scale-100');
+            paymentModalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                paymentModal.classList.add('hidden');
+                // Reset states
+                paymentFormContainer.classList.remove('hidden');
+                paymentPendingContainer.classList.add('hidden');
+                paymentForm.reset();
+            }, 300);
+        }
+
+        openPaymentBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                openModal(btn.dataset.plan, btn.dataset.price);
+            });
+        });
+
+        closePaymentBtn.addEventListener('click', closeModal);
+        paymentBackdrop.addEventListener('click', closeModal);
+        returnToDashboardBtn.addEventListener('click', closeModal);
+
+        // Payment Method Selection
+        const methodMoncash = document.getElementById('methodMoncash');
+        const methodNatcash = document.getElementById('methodNatcash');
+        const checkMoncash = document.getElementById('checkMoncash');
+        const checkNatcash = document.getElementById('checkNatcash');
+        const selectedPaymentMethod = document.getElementById('selectedPaymentMethod');
+
+        function selectMethod(method) {
+            selectedPaymentMethod.value = method;
+            if (method === 'moncash') {
+                methodMoncash.classList.remove('border-transparent', 'opacity-50');
+                methodMoncash.classList.add('border-sky-400', 'bg-sky-500/10');
+                checkMoncash.classList.remove('opacity-0');
+                
+                methodNatcash.classList.add('border-transparent', 'opacity-50');
+                methodNatcash.classList.remove('border-emerald-400', 'bg-emerald-500/10');
+                checkNatcash.classList.add('opacity-0');
+            } else {
+                methodNatcash.classList.remove('border-transparent', 'opacity-50');
+                methodNatcash.classList.add('border-emerald-400', 'bg-emerald-500/10');
+                checkNatcash.classList.remove('opacity-0');
+                
+                methodMoncash.classList.add('border-transparent', 'opacity-50');
+                methodMoncash.classList.remove('border-sky-400', 'bg-sky-500/10');
+                checkMoncash.classList.add('opacity-0');
+            }
+        }
+
+        methodMoncash.addEventListener('click', () => selectMethod('moncash'));
+        methodNatcash.addEventListener('click', () => selectMethod('natcash'));
+        
+        // Default select moncash
+        selectMethod('moncash');
+
+        // File input handling
+        const receiptInput = document.getElementById('receiptInput');
+        const dropzoneText = document.getElementById('dropzoneText');
+        const dropzoneDiv = document.getElementById('dropzoneDiv');
+
+        if(receiptInput) {
+            receiptInput.addEventListener('change', (e) => {
+                if(e.target.files.length > 0) {
+                    const fileName = e.target.files[0].name;
+                    dropzoneText.innerText = fileName;
+                    dropzoneText.classList.add('text-sky-400');
+                    dropzoneDiv.classList.add('border-sky-500/50', 'bg-sky-500/10');
+                } else {
+                    dropzoneText.innerText = 'Cliquez ou glissez le reçu ici';
+                    dropzoneText.classList.remove('text-sky-400');
+                    dropzoneDiv.classList.remove('border-sky-500/50', 'bg-sky-500/10');
+                }
+            });
+        }
+
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!selectedPaymentMethod.value) {
+                alert('Veuillez sélectionner une méthode de paiement.');
+                return;
+            }
+            if(!receiptInput || receiptInput.files.length === 0) {
+                alert('Veuillez télécharger la capture de votre reçu.');
+                return;
+            }
+            
+            const originalText = submitPaymentBtn.innerHTML;
+            submitPaymentBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span>Uploading...</span>`;
+            submitPaymentBtn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Non connecté");
+
+                // 1. Upload file to Supabase Storage
+                const file = receiptInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${session.user.id}_${Date.now()}.${fileExt}`;
+                const filePath = `transfers/${fileName}`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('receipts')
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    throw new Error("Erreur lors de l'upload de l'image: " + uploadError.message);
+                }
+
+                // 2. Get Public URL
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('receipts')
+                    .getPublicUrl(filePath);
+
+                // 3. Save to database
+                const { error: dbError } = await supabaseClient
+                    .from('subscriptions')
+                    .insert([{
+                        user_id: session.user.id,
+                        plan_name: modalPlanName.innerText,
+                        status: 'PENDING',
+                        payment_proof_url: publicUrl
+                    }]);
+
+                if (dbError) throw dbError;
+
+                paymentFormContainer.classList.add('hidden');
+                paymentPendingContainer.classList.remove('hidden');
+                
+                // Update subscription status in dashboard visually
+                const statusDiv = document.getElementById('currentStatusTitle');
+                const statusBadge = document.getElementById('currentStatusBadge');
+                
+                if(statusDiv && statusBadge) {
+                    statusDiv.innerText = `${modalPlanName.innerText} Plan`;
+                    statusBadge.className = "badge px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold flex items-center gap-1";
+                    statusBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE`;
+                }
+
+            } catch (err) {
+                console.error("Payment Error:", err);
+                alert("Erreur lors de la soumission du paiement: " + (err.message || JSON.stringify(err)));
+            } finally {
+                submitPaymentBtn.innerHTML = originalText;
+                submitPaymentBtn.disabled = false;
+                lucide.createIcons();
+            }
+        });
+
+        // 5. Internal Settings Navigation
+        const settingNavItems = document.querySelectorAll('.settings-nav-item');
+        const settingContents = document.querySelectorAll('.setting-content');
+
+        settingNavItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active classes from nav items
+                settingNavItems.forEach(nav => {
+                    nav.classList.remove('active', 'text-white', 'bg-sky-500/10', 'shadow-[inset_2px_0_0_#0ea5e9]');
+                    nav.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                    const icon = nav.querySelector('i');
+                    if(icon) {
+                        icon.classList.remove('text-sky-400');
+                        icon.classList.add('text-slate-400');
+                    }
+                });
+
+                // Add active class to clicked item
+                item.classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                item.classList.add('active', 'text-white', 'bg-sky-500/10', 'shadow-[inset_2px_0_0_#0ea5e9]');
+                const activeIcon = item.querySelector('i');
+                if(activeIcon) {
+                    activeIcon.classList.remove('text-slate-400');
+                    activeIcon.classList.add('text-sky-400');
+                }
+
+                // Hide all settings content
+                settingContents.forEach(content => {
+                    content.classList.remove('block');
+                    content.classList.add('hidden');
+                });
+                
+                // Show target content
+                const targetId = item.getAttribute('data-setting-target');
+                const targetContent = document.getElementById(targetId);
+                if(targetContent) {
+                    targetContent.classList.remove('hidden');
+                    targetContent.classList.add('block');
+                }
+            });
+        });
+
+        // 6. Header Actions (Pro Badge, Avatar)
+        const headerProBadge = document.getElementById('headerProBadge');
+        const headerProfileAvatar = document.getElementById('headerProfileAvatar');
+        
+        if(headerProBadge) {
+            headerProBadge.addEventListener('click', () => {
+                // Navigate to subscription tab
+                document.querySelector('[data-target=\'tab-billing\']').click();
+            });
+        }
+
+        if(headerProfileAvatar) {
+            headerProfileAvatar.addEventListener('click', () => {
+                // Navigate to settings tab first
+                document.querySelector('[data-target=\'tab-settings\']').click();
+                // Then navigate to profile settings specifically
+                setTimeout(() => {
+                    document.querySelector('[data-setting-target=\'setting-profile\']').click();
+                }, 50);
+            });
+        }
+
+        // 7. Light Mode Action
+        const lightModeBtn = document.getElementById('lightModeBtn');
+        if(lightModeBtn) {
+            lightModeBtn.addEventListener('click', () => {
+                alert("Le Mode Clair sera disponible dans la prochaine mise à jour majeure ! Pour l'instant, profitez du Mode Sombre Ultra.");
+            });
+        }
+
+    </script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    
+    <script>
+        // Check Session and Load Profile
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Fetch Profile
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            let userName = 'User';
+            if (session.user.user_metadata && session.user.user_metadata.full_name) {
+                userName = session.user.user_metadata.full_name;
+            }
+            if (profile && profile.full_name) {
+                userName = profile.full_name;
+            }
+
+            const userEmail = (profile && profile.email) || session.user.email;
+            const encodedName = encodeURIComponent(userName);
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodedName}&background=0D8ABC&color=fff`;
+
+            // Update Header
+            const headerUserName = document.getElementById('headerUserName');
+            const headerUserAvatar = document.getElementById('headerUserAvatar');
+            if(headerUserName) headerUserName.innerText = `Welcome back, ${userName}`;
+            if(headerUserAvatar) headerUserAvatar.src = avatarUrl;
+
+            // Update Settings Tab
+            const settingsUserAvatar = document.getElementById('settingsUserAvatar');
+            const settingsFullName = document.getElementById('settingsFullName');
+            const settingsUsername = document.getElementById('settingsUsername');
+            const settingsEmail = document.getElementById('settingsEmail');
+
+            if(settingsUserAvatar) settingsUserAvatar.src = avatarUrl;
+            if(settingsFullName) settingsFullName.value = userName;
+            if(settingsUsername) settingsUsername.value = userName.toLowerCase().replace(/\s+/g, '_');
+            if(settingsEmail) settingsEmail.value = userEmail;
+
+            // Fetch Subscription Status
+            const { data: subs } = await supabaseClient
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false });
+
+            if (subs && subs.length > 0) {
+                const sub = subs[0];
+                const statusDiv = document.getElementById('currentStatusTitle');
+                const statusBadge = document.getElementById('currentStatusBadge');
+                const planName = sub.plan_name || 'Trading Plan';
+                const statusContainer = document.getElementById('currentStatusCard');
+                
+                if (statusDiv && statusBadge && statusContainer) {
+                    statusDiv.innerText = `${planName} Plan`;
+                    
+                    if (sub.status === 'ACTIVE') {
+                        statusBadge.className = "badge px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center gap-1";
+                        statusBadge.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3"></i> ACTIF`;
+                        statusContainer.className = "glass-card rounded-2xl p-6 mb-12 border-l-4 border-l-emerald-500 relative overflow-hidden";
+                        
+                        // Update Plan Badge in header
+                        const headerPlanBadge = document.getElementById('headerPlanBadge');
+                        if (headerPlanBadge) {
+                            headerPlanBadge.className = "px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hidden sm:flex items-center gap-1 cursor-pointer transition-all";
+                            headerPlanBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> ${planName.toUpperCase()} ACTIF`;
+                        }
+                        
+                        // Calculate dates
+                        const activationDate = new Date(sub.created_at);
+                        let durationDays = 30; // Starter = 30 days
+                        if (planName.toLowerCase().includes('pro')) durationDays = 90; // Pro = 90 days
+                        if (planName.toLowerCase().includes('vip')) durationDays = 180; // VIP = 180 days
+                        
+                        const expirationDate = new Date(activationDate);
+                        expirationDate.setDate(expirationDate.getDate() + durationDays);
+                        
+                        const now = new Date();
+                        const timeDiff = expirationDate.getTime() - now.getTime();
+                        let daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        if (daysLeft < 0) daysLeft = 0;
+                        
+                        const elActivation = document.getElementById('activationDateDisplay');
+                        const elExpiration = document.getElementById('expirationDateDisplay');
+                        const elDaysLeft = document.getElementById('daysLeftDisplay');
+                        
+                        if (elActivation) elActivation.innerText = activationDate.toLocaleDateString();
+                        if (elExpiration) elExpiration.innerText = expirationDate.toLocaleDateString();
+                        if (elDaysLeft) {
+                            elDaysLeft.innerText = daysLeft;
+                            if (daysLeft > 10) {
+                                elDaysLeft.className = "font-medium text-emerald-400";
+                            } else {
+                                elDaysLeft.className = "font-medium text-rose-400";
+                            }
+                        }
+
+                    } else if (sub.status === 'PENDING') {
+                        statusBadge.className = "badge px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold flex items-center gap-1";
+                        statusBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE`;
+                        statusContainer.className = "glass-card rounded-2xl p-6 mb-12 border-l-4 border-l-sky-500 relative overflow-hidden";
+                        
+                        // Update Plan Badge in header
+                        const headerPlanBadge = document.getElementById('headerPlanBadge');
+                        if (headerPlanBadge) {
+                            headerPlanBadge.className = "px-3 py-1 text-xs font-bold rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 hidden sm:flex items-center gap-1 cursor-pointer transition-all";
+                            headerPlanBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE`;
+                        }
+                    } else {
+                        statusBadge.className = "badge px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1";
+                        statusBadge.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3"></i> REJETÉ`;
+                    }
+                    lucide.createIcons();
+                }
+
+                // Populate Subscription History
+                const historyBody = document.getElementById('subscriptionHistoryBody');
+                if (historyBody) {
+                    historyBody.innerHTML = '';
+                    subs.forEach(s => {
+                        const sActivationDate = new Date(s.created_at);
+                        let sExpirationDate = new Date(sActivationDate);
+                        sExpirationDate.setMonth(sExpirationDate.getMonth() + 1);
+
+                        let sBadgeHtml = '';
+                        if (s.status === 'ACTIVE') {
+                            sBadgeHtml = `<span class="badge px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> ACTIF</span>`;
+                        } else if (s.status === 'PENDING') {
+                            sBadgeHtml = `<span class="badge px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold inline-flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE</span>`;
+                        } else if (s.status === 'EXPIRED') {
+                            sBadgeHtml = `<span class="badge px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold inline-flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> EXPIRÉ</span>`;
+                        } else {
+                            sBadgeHtml = `<span class="badge px-2 py-1 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-bold">${s.status}</span>`;
+                        }
+
+                        historyBody.innerHTML += `
+                            <tr class="hover:bg-slate-800/30 transition-colors">
+                                <td class="px-6 py-4 font-medium text-white">${s.plan_name || 'Trading Plan'}</td>
+                                <td class="px-6 py-4">${sActivationDate.toLocaleDateString()}</td>
+                                <td class="px-6 py-4">${sExpirationDate.toLocaleDateString()}</td>
+                                <td class="px-6 py-4 text-right flex justify-end">${sBadgeHtml}</td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                }
+            } // closes if (subs && subs.length > 0)
+        } // closes async function checkSession()
+        checkSession();
+
+        // Handle Logout
+        const logoutBtn = document.getElementById('logoutBtn');
+        if(logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await supabaseClient.auth.signOut();
+                window.location.href = 'login.html';
+            });
+        }
+
+        // --- SUPABASE REALTIME TRADES INTEGRATION ---
+        async function loadAndSubscribeToTrades() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if(!session) return;
+            const userId = session.user.id;
+
+            // 0. Check MT5 Account status
+            const { data: mt5Accounts } = await supabaseClient
+                .from('mt5_accounts')
+                .select('*')
+                .eq('user_id', userId)
+                .limit(1);
+
+            const formContainer = document.getElementById('mt5-form-container');
+            const connectedContainer = document.getElementById('mt5-connected-container');
+            const lockedContainer = document.getElementById('mt5-locked-container');
+            const sidebarMT5Dot = document.getElementById('sidebarMT5Dot');
+
+            // Fetch Subscription directly to be sure (since loadAndSubscribeToTrades and checkSession run async)
+            const { data: subsCheck } = await supabaseClient
+                .from('subscriptions')
+                .select('status')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            const isActive = (subsCheck && subsCheck.length > 0 && subsCheck[0].status === 'ACTIVE');
+
+            if (!isActive) {
+                // Lock the MT5 section
+                if(formContainer) formContainer.classList.add('hidden');
+                if(connectedContainer) connectedContainer.classList.add('hidden');
+                if(lockedContainer) lockedContainer.classList.remove('hidden');
+                return; // Stop here, no need to subscribe to trades or mt5 accounts
+            }
+
+            if (mt5Accounts && mt5Accounts.length > 0) {
+                const acc = mt5Accounts[0];
+                document.getElementById('connectedBrokerName').innerText = acc.broker_name;
+                document.getElementById('connectedAccountDetails').innerText = `Account: ${acc.login_id} • ${acc.server_name}`;
+                
+                formContainer.classList.add('hidden');
+                connectedContainer.classList.remove('hidden');
+                
+                if (sidebarMT5Dot) {
+                    sidebarMT5Dot.classList.replace('bg-rose-500', 'bg-emerald-400');
+                    sidebarMT5Dot.classList.replace('shadow-[0_0_8px_#ef4444]', 'shadow-[0_0_8px_#34d399]');
+                }
+
+                // Real Balance Sync
+                const cb = document.getElementById('connectedBalance');
+                const ce = document.getElementById('connectedEquity');
+                if(cb && ce) {
+                    cb.innerText = `$${parseFloat(acc.balance || 0).toFixed(2)}`;
+                    cb.classList.add('text-emerald-400');
+                    ce.innerText = `$${parseFloat(acc.equity || 0).toFixed(2)}`;
+                    
+                    // Masquer le message de synchronisation si la balance est là
+                    if(parseFloat(acc.balance || 0) > 0) {
+                        const syncMsg = document.querySelector('.bg-sky-900\\/30');
+                        if(syncMsg) syncMsg.style.display = 'none';
+                    }
+                }
+            }
+
+            const liveTradesBody = document.getElementById('liveTradesBody');
+            const fullTradesBody = document.getElementById('fullTradesBody');
+            const recentActivityContainer = document.getElementById('recentActivityContainer');
+            const recentActivityEmpty = document.getElementById('recentActivityEmpty');
+            const dashTotalProfit = document.getElementById('dashTotalProfit');
+            const dashWinRate = document.getElementById('dashWinRate');
+            const dashWinRateBar = document.getElementById('dashWinRateBar');
+
+            // Performance Tab Elements
+            const statsTotalTrades = document.getElementById('statsTotalTrades');
+            const statsWonTrades = document.getElementById('statsWonTrades');
+            const statsLostTrades = document.getElementById('statsLostTrades');
+            const statsTotalProfit = document.getElementById('statsTotalProfit');
+            const statsWinRate = document.getElementById('statsWinRate');
+
+            let allFetchedTrades = [];
+            let currentTradeFilter = 'all';
+
+            const btnFilterToday = document.getElementById('btnFilterToday');
+            const btnFilterAll = document.getElementById('btnFilterAll');
+
+            function updateFilterUI() {
+                if(currentTradeFilter === 'today') {
+                    if(btnFilterToday) btnFilterToday.className = "px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30";
+                    if(btnFilterAll) btnFilterAll.className = "px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700";
+                } else {
+                    if(btnFilterToday) btnFilterToday.className = "px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition-colors border border-slate-700";
+                    if(btnFilterAll) btnFilterAll.className = "px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400 text-sm font-medium border border-sky-500/30";
+                }
+            }
+
+            if(btnFilterToday && btnFilterAll) {
+                btnFilterToday.addEventListener('click', () => {
+                    currentTradeFilter = 'today';
+                    updateFilterUI();
+                    renderTrades(allFetchedTrades);
+                });
+                btnFilterAll.addEventListener('click', () => {
+                    currentTradeFilter = 'all';
+                    updateFilterUI();
+                    renderTrades(allFetchedTrades);
+                });
+            }
+
+            function renderTrades(trades) {
+                let filteredTrades = trades || [];
+                if (currentTradeFilter === 'today') {
+                    const today = new Date().toLocaleDateString();
+                    filteredTrades = filteredTrades.filter(t => new Date(t.open_time).toLocaleDateString() === today);
+                }
+
+                if(filteredTrades.length === 0) {
+                    const emptyState = `
+                        <tr>
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="inbox" class="w-8 h-8 text-slate-600 mb-3"></i>
+                                    <p class="text-slate-400 font-medium">Aucune transaction enregistr&eacute;e</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    if(liveTradesBody) liveTradesBody.innerHTML = emptyState;
+                    if(fullTradesBody) fullTradesBody.innerHTML = emptyState;
+                    lucide.createIcons();
+                    return;
+                }
+
+                if(liveTradesBody) liveTradesBody.innerHTML = '';
+                if(fullTradesBody) fullTradesBody.innerHTML = '';
+                
+                // Clear recent activity container
+                if (recentActivityContainer) {
+                    const items = recentActivityContainer.querySelectorAll('.activity-item');
+                    items.forEach(el => el.remove());
+                }
+
+                let totalProfit = 0;
+                let wonTrades = 0;
+                let completedTrades = 0;
+                let openTradesCount = 0;
+
+                // Split into open and closed trades
+                let openTrades = [];
+                let closedTradesList = [];
+
+                filteredTrades.forEach(trade => {
+                    // Accumulate stats
+                    totalProfit += parseFloat(trade.profit || 0);
+                    if(trade.status === 'WON' || trade.status === 'WIN' || trade.status === 'LOST' || trade.status === 'LOSS') {
+                        completedTrades++;
+                        if(trade.status === 'WON' || trade.status === 'WIN') wonTrades++;
+                        closedTradesList.push(trade);
+                    } else if (trade.status === 'OPEN') {
+                        openTrades.push(trade);
+                    }
+
+                    // Render Row (for the full history tab)
+                    const typeColor = trade.type === 'BUY' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10';
+                    const profitColor = trade.profit > 0 ? 'text-emerald-400' : (trade.profit < 0 ? 'text-rose-400' : 'text-slate-300');
+                    const statusBadge = (trade.status === 'OPEN')
+                        ? '<span class="px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold">OPEN</span>'
+                        : (trade.status === 'WON' || trade.status === 'WIN')
+                            ? '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">WIN ✓</span>'
+                            : '<span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">LOSS ✗</span>';
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold font-heading">${trade.symbol}</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-bold ${typeColor}">${trade.type}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 font-medium">${trade.entry.toFixed(5)}</td>
+                        <td class="py-3 px-4 text-emerald-400">${trade.tp ? trade.tp.toFixed(5) : '-'}</td>
+                        <td class="py-3 px-4 text-rose-400">${trade.sl ? trade.sl.toFixed(5) : '-'}</td>
+                        <td class="py-3 px-4 font-bold ${profitColor}">$${trade.profit.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-right">${statusBadge}</td>
+                    `;
+                    if(fullTradesBody) fullTradesBody.appendChild(tr.cloneNode(true));
+
+                    // If OPEN, render in Live Trades table
+                    if (trade.status === 'OPEN') {
+                        openTradesCount++;
+                        if(liveTradesBody) liveTradesBody.appendChild(tr);
+                    }
+                });
+
+                // Handle empty state for Live Trades
+                if (openTradesCount === 0) {
+                    const emptyLiveState = `
+                        <tr>
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="activity" class="w-8 h-8 text-slate-600 mb-3 opacity-55"></i>
+                                    <p class="text-slate-400 font-medium">Aucune position ouverte</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    if(liveTradesBody) liveTradesBody.innerHTML = emptyLiveState;
+                }
+
+                // Render Recent Activity (closed trades)
+                if (closedTradesList.length > 0) {
+                    if (recentActivityEmpty) recentActivityEmpty.style.display = 'none';
+                    
+                    closedTradesList.slice(0, 5).forEach(trade => {
+                        const isWin = trade.status === 'WIN' || trade.status === 'WON';
+                        const iconColor = isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400';
+                        const iconType = isWin ? 'trending-up' : 'trending-down';
+                        const profitSign = trade.profit > 0 ? `+$${trade.profit.toFixed(2)}` : `-$${Math.abs(trade.profit).toFixed(2)}`;
+                        const profitClass = isWin ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold';
+                        
+                        const closeDate = new Date(trade.close_time || trade.open_time);
+                        const formattedTime = closeDate.toLocaleString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        const div = document.createElement('div');
+                        div.className = "activity-item flex items-center gap-3 p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 hover:bg-slate-800/50 transition-colors";
+                        div.innerHTML = `
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}">
+                                <i data-lucide="${iconType}" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-slate-200">${trade.symbol} ${trade.type} - ${isWin ? 'TP Atteint' : 'SL Atteint'}</p>
+                                <p class="text-[10px] text-slate-500">${formattedTime}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold ${profitClass}">${profitSign}</p>
+                                <p class="text-[9px] font-bold ${isWin ? 'text-emerald-500' : 'text-rose-500'} uppercase">${trade.status}</p>
+                            </div>
+                        `;
+                        if (recentActivityContainer) recentActivityContainer.appendChild(div);
+                    });
+                } else {
+                    if (recentActivityEmpty) recentActivityEmpty.style.display = 'flex';
+                }
+                
+                // Update Dashboard Metrics
+                if(dashTotalProfit) dashTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                if(statsTotalProfit) statsTotalProfit.innerText = `$${totalProfit.toFixed(2)}`;
+                
+                if(statsTotalTrades) statsTotalTrades.innerText = completedTrades + (filteredTrades.length - completedTrades); // include OPEN
+                if(statsWonTrades) statsWonTrades.innerText = wonTrades;
+                if(statsLostTrades) statsLostTrades.innerText = (completedTrades - wonTrades);
+
+                if(completedTrades > 0) {
+                    const winRate = Math.round((wonTrades / completedTrades) * 100);
+                    if(dashWinRate) dashWinRate.innerText = `${winRate}%`;
+                    if(dashWinRateBar) dashWinRateBar.style.width = `${winRate}%`;
+                    if(statsWinRate) statsWinRate.innerText = `${winRate}%`;
+                } else {
+                    if(dashWinRate) dashWinRate.innerText = `0%`;
+                    if(dashWinRateBar) dashWinRateBar.style.width = `0%`;
+                    if(statsWinRate) statsWinRate.innerText = `0%`;
+                }
+
+                // ── Calcul Drawdown Max ──────────────────────────────────────
+                // = pire sequence de pertes consecutives / balance estimee
+                const closedTrades = filteredTrades.filter(t =>
+                    t.status === 'WIN' || t.status === 'WON' ||
+                    t.status === 'LOSS' || t.status === 'LOST'
+                ).slice().reverse(); // ordre chronologique
+
+                let maxDrawdown = 0;
+                let peak = 0;
+                let runningPnl = 0;
+                closedTrades.forEach(t => {
+                    runningPnl += parseFloat(t.profit || 0);
+                    if(runningPnl > peak) peak = runningPnl;
+                    const dd = peak - runningPnl;
+                    if(dd > maxDrawdown) maxDrawdown = dd;
+                });
+
+                // Exprimer en % par rapport au pic de profit (ou balance de ref $100)
+                const refBalance = Math.max(peak, 100);
+                const ddPct = refBalance > 0 ? (maxDrawdown / refBalance * 100) : 0;
+                const ddEl  = document.getElementById('dashMaxDrawdown');
+                const ddBar = document.getElementById('dashMaxDrawdownBar');
+                if(ddEl)  ddEl.innerText = `${ddPct.toFixed(1)}%`;
+                if(ddBar) ddBar.style.width = `${Math.min(ddPct, 100)}%`;
+                // Couleur selon severite
+                if(ddEl) {
+                    ddEl.className = ddPct === 0
+                        ? 'text-3xl font-bold font-heading text-emerald-400'
+                        : ddPct < 5
+                            ? 'text-3xl font-bold font-heading text-yellow-400'
+                            : 'text-3xl font-bold font-heading text-rose-400';
+                }
+
+            }
+
+            // 1. Initial Fetch
+            const { data: initialTrades } = await supabaseClient
+                .from('trades')
+                .select('*')
+                .eq('user_id', userId)
+                .order('open_time', { ascending: false });
+            
+            allFetchedTrades = initialTrades || [];
+            renderTrades(allFetchedTrades);
+
+            // 2. Realtime Subscription
+            const channel = supabaseClient
+                .channel('schema-db-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'trades', filter: `user_id=eq.${userId}` },
+                    async (payload) => {
+                        // Re-fetch to ensure order and full state (simplified approach)
+                        const { data: updatedTrades } = await supabaseClient
+                            .from('trades')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('open_time', { ascending: false });
+                        allFetchedTrades = updatedTrades || [];
+                        renderTrades(allFetchedTrades);
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'mt5_accounts', filter: `user_id=eq.${userId}` },
+                    (payload) => {
+                        const updatedAcc = payload.new;
+                        const cb = document.getElementById('connectedBalance');
+                        const ce = document.getElementById('connectedEquity');
+                        if (cb && ce) {
+                            cb.innerText = `$${parseFloat(updatedAcc.balance || 0).toFixed(2)}`;
+                            cb.classList.add('text-emerald-400');
+                            ce.innerText = `$${parseFloat(updatedAcc.equity || 0).toFixed(2)}`;
+                            
+                            if (parseFloat(updatedAcc.balance || 0) > 0) {
+                                const syncMsg = document.querySelector('.bg-sky-900\\/30');
+                                if (syncMsg) syncMsg.style.display = 'none';
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        // Initialize Realtime
+        loadAndSubscribeToTrades();
+
+        // ═══════════════════════════════════════════════════════════
+        // BOT CONTROL — Start / Stop depuis le Dashboard
+        // ═══════════════════════════════════════════════════════════
+
+        let _botTradingEnabled = false;
+        let _cryptoBotTradingEnabled = false;
+
+        function updateBotUI(tradingEnabled, lastHeartbeat) {
+            const btn     = document.getElementById('botToggleBtn');
+            const btnText = document.getElementById('botToggleBtnText');
+            const dot     = document.getElementById('botStatusDot');
+            const statusT = document.getElementById('botStatusText');
+            const heartEl = document.getElementById('botHeartbeatText');
+
+            if (!btn) return;
+
+            // Vérifie si le bot Python est "vivant" (heartbeat < 90 secondes)
+            let botAlive = false;
+            if (lastHeartbeat) {
+                const diff = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000;
+                botAlive = diff < 90;
+                const mins = Math.floor(diff / 60);
+                const secs = Math.floor(diff % 60);
+                heartEl.innerText = botAlive
+                    ? `Actif il y a ${mins > 0 ? mins + 'm ' : ''}${secs}s`
+                    : `Hors ligne depuis ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+            } else {
+                heartEl.innerText = 'Bot Python non démarré';
+            }
+
+            _botTradingEnabled = tradingEnabled;
+
+            if (!botAlive) {
+                // Bot Python pas en cours d'exécution
+                dot.className = 'bot-status-dot dot-offline';
+                statusT.innerText = 'HORS LIGNE';
+                statusT.className = 'text-xs font-bold text-red-400';
+                btn.className = 'bot-toggle-btn state-loading';
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i><span>Bot Déconnecté</span>`;
+            } else if (tradingEnabled) {
+                // Bot actif — trading en cours
+                dot.className = 'bot-status-dot dot-active';
+                statusT.innerText = 'TRADING ACTIF';
+                statusT.className = 'text-xs font-bold text-emerald-400';
+                btn.className = 'bot-toggle-btn state-active';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Arrêter le Trading</span>`;
+            } else {
+                // Bot en veille — pas de trading
+                dot.className = 'bot-status-dot dot-inactive';
+                statusT.innerText = 'EN VEILLE';
+                statusT.className = 'text-xs font-bold text-slate-400';
+                btn.className = 'bot-toggle-btn state-inactive';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Démarrer le Trading</span>`;
+            }
+            // Rafraîchir les icônes Lucide
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updateCryptoBotUI(tradingEnabled, lastHeartbeat) {
+            const btn     = document.getElementById('cryptoBotToggleBtn');
+            const btnText = document.getElementById('cryptoBotToggleBtnText');
+            const dot     = document.getElementById('cryptoBotStatusDot');
+            const statusT = document.getElementById('cryptoBotStatusText');
+            const heartEl = document.getElementById('cryptoBotHeartbeatText');
+
+            if (!btn) return;
+
+            // Vérifie si le bot Python est "vivant" (heartbeat < 90 secondes)
+            let botAlive = false;
+            if (lastHeartbeat) {
+                const diff = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000;
+                botAlive = diff < 90;
+                const mins = Math.floor(diff / 60);
+                const secs = Math.floor(diff % 60);
+                heartEl.innerText = botAlive
+                    ? `Actif il y a ${mins > 0 ? mins + 'm ' : ''}${secs}s`
+                    : `Hors ligne depuis ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+            } else {
+                heartEl.innerText = 'Bot Python non démarré';
+            }
+
+            _cryptoBotTradingEnabled = tradingEnabled;
+
+            if (!botAlive) {
+                // Bot Python pas en cours d'exécution
+                dot.className = 'bot-status-dot dot-offline';
+                statusT.innerText = 'HORS LIGNE';
+                statusT.className = 'text-xs font-bold text-red-400';
+                btn.className = 'bot-toggle-btn state-loading';
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i><span>Bot Déconnecté</span>`;
+            } else if (tradingEnabled) {
+                // Bot actif — trading en cours
+                dot.className = 'bot-status-dot dot-active';
+                statusT.innerText = 'TRADING ACTIF';
+                statusT.className = 'text-xs font-bold text-emerald-400';
+                btn.className = 'bot-toggle-btn state-active';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Arrêter le Trading</span>`;
+            } else {
+                // Bot en veille — pas de trading
+                dot.className = 'bot-status-dot dot-inactive';
+                statusT.innerText = 'EN VEILLE';
+                statusT.className = 'text-xs font-bold text-slate-400';
+                btn.className = 'bot-toggle-btn state-inactive';
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Démarrer le Trading</span>`;
+            }
+            // Rafraîchir les icônes Lucide
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function fetchBotStatus() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('bot_control')
+                    .select('trading_enabled, last_heartbeat')
+                    .eq('id', 1)
+                    .single();
+                if (data) {
+                    updateBotUI(data.trading_enabled, data.last_heartbeat);
+                } else {
+                    // Ligne inexistante — créer avec valeurs par défaut
+                    updateBotUI(false, null);
+                }
+            } catch(e) {
+                console.warn('bot_control fetch error:', e);
+                updateBotUI(false, null);
+            }
+        }
+
+        async function fetchCryptoBotStatus() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('bot_control')
+                    .select('trading_enabled, last_heartbeat')
+                    .eq('id', 2)
+                    .single();
+                if (data) {
+                    updateCryptoBotUI(data.trading_enabled, data.last_heartbeat);
+                } else {
+                    updateCryptoBotUI(false, null);
+                }
+            } catch(e) {
+                console.warn('crypto bot_control fetch error:', e);
+                updateCryptoBotUI(false, null);
+            }
+        }
+
+        async function toggleBot() {
+            const btn = document.getElementById('botToggleBtn');
+            if (!btn || btn.disabled) return;
+
+            const newState = !_botTradingEnabled;
+            btn.disabled = true;
+            btn.className = 'bot-toggle-btn state-loading';
+            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>${newState ? 'Activation...' : 'Arrêt...'}</span>`;
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('bot_control')
+                    .upsert({ id: 1, trading_enabled: newState }, { onConflict: 'id' });
+
+                if (error) throw error;
+
+                // Feedback visuel immédiat
+                setTimeout(fetchBotStatus, 500);
+            } catch(e) {
+                console.error('Toggle bot error:', e);
+                alert('Erreur: Impossible de changer l\'état du bot. Vérifiez votre connexion.');
+                fetchBotStatus(); // Restaurer l'état réel
+            }
+        }
+
+        async function toggleCryptoBot() {
+            const btn = document.getElementById('cryptoBotToggleBtn');
+            if (!btn || btn.disabled) return;
+
+            const newState = !_cryptoBotTradingEnabled;
+            btn.disabled = true;
+            btn.className = 'bot-toggle-btn state-loading';
+            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>${newState ? 'Activation...' : 'Arrêt...'}</span>`;
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('bot_control')
+                    .upsert({ id: 2, trading_enabled: newState }, { onConflict: 'id' });
+
+                if (error) throw error;
+
+                // Feedback visuel immédiat
+                setTimeout(fetchCryptoBotStatus, 500);
+            } catch(e) {
+                console.error('Toggle crypto bot error:', e);
+                alert('Erreur: Impossible de changer l\'état du bot Crypto. Vérifiez votre connexion.');
+                fetchCryptoBotStatus(); // Restaurer l'état réel
+            }
+        }
+
+        // Charger le statut initial
+        fetchBotStatus();
+        fetchCryptoBotStatus();
+
+        // Rafraichir toutes les 20 secondes (pour le heartbeat)
+        setInterval(() => {
+            fetchBotStatus();
+            fetchCryptoBotStatus();
+        }, 20000);
+
+        // Ecoute en temps reel les changements de bot_control
+        supabaseClient
+            .channel('bot-control-changes')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'bot_control' },
+                (payload) => {
+                    if (payload.new) {
+                        if (payload.new.id === 1) {
+                            updateBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
+                        } else if (payload.new.id === 2) {
+                            updateCryptoBotUI(payload.new.trading_enabled, payload.new.last_heartbeat);
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        // ═══════════════════════════════════════════════════════════
+        // ADMIN CHECK — Bouton visible seulement pour admins
+        // ═══════════════════════════════════════════════════════════
+        (async () => {
+            // Rafraichir session pour avoir les derniers app_metadata
+            await supabaseClient.auth.refreshSession();
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            // Double securite: verifier par role ET par email
+            const ADMIN_EMAILS = ['tidem999@gmail.com'];
+            const isAdmin = user?.app_metadata?.role === 'admin'
+                         || ADMIN_EMAILS.includes(user?.email);
+
+            const botBtn = document.getElementById('botToggleBtn');
+            if (!isAdmin && botBtn) {
+                botBtn.outerHTML = `
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/50">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span class="text-xs text-slate-500 font-medium">Controle Admin</span>
+                    </div>`;
+            }
+
+            const cryptoBotBtn = document.getElementById('cryptoBotToggleBtn');
+            if (!isAdmin && cryptoBotBtn) {
+                cryptoBotBtn.outerHTML = `
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/50">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span class="text-xs text-slate-500 font-medium">Controle Admin</span>
+                    </div>`;
+            }
+
+            if (window.lucide) lucide.createIcons();
+
+            // Afficher/cacher la section Admin dans le sidebar
+            const adminNavSection = document.getElementById('adminNavSection');
+            if (adminNavSection) {
+                if (isAdmin) {
+                    adminNavSection.classList.remove('hidden');
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    adminNavSection.classList.add('hidden');
+                }
+            }
+
+        })();
+
+    </script>
+
+</body>
+</html>

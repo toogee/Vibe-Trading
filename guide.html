@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Trading — Guide de Démarrage | Etap pa Etap</title>
+    <meta name="description" content="Découvrez comment connecter votre compte de trading MT5 à Vibe Trading et lancer le bot automatisé SSED V2 tape par étape.">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0ea5e9">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            800: '#0f172a',
+                            900: '#020617',
+                        },
+                        neon: {
+                            blue: '#0ea5e9',
+                            dark: '#0284c7',
+                            green: '#10b981',
+                            red: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+        }
+        
+        /* Animated Background Orbs */
+        .bg-fx { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+        .glow-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.15; animation: drift 20s infinite alternate ease-in-out; }
+        .orb-1 { width: 400px; height: 400px; background: #0ea5e9; top: -10%; left: -10%; }
+        .orb-2 { width: 500px; height: 500px; background: #8b5cf6; bottom: -10%; right: -10%; animation-delay: -5s; }
+        @keyframes drift { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(50px, 50px) scale(1.15); } }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.3) 0%, rgba(15, 23, 42, 0.5) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            border-top: 1px solid rgba(14, 165, 233, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px -10px rgba(14, 165, 233, 0.2);
+            border-top: 1px solid rgba(14, 165, 233, 0.5);
+            border-color: rgba(51, 65, 85, 0.6);
+        }
+
+        .step-number-gradient {
+            background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Language Toggle Animation */
+        .toggle-dot {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        input:checked ~ .toggle-dot {
+            transform: translateX(100%);
+        }
+
+        .lang-fr, .lang-ht {
+            transition: opacity 0.3s ease;
+        }
+
+        @media (max-width: 480px) {
+            .logo-text { display: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative overflow-x-hidden font-sans">
+
+    <!-- Background Orbs -->
+    <div class="bg-fx">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="w-full h-20 glass-panel border-b-0 flex items-center justify-between px-4 sm:px-8 z-30 shrink-0 sticky top-0">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="flex items-center gap-3 hover:opacity-95 transition-opacity">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
+                    <i data-lucide="activity" class="text-white w-5 h-5"></i>
+                </div>
+                <span class="logo-text font-heading font-bold text-xl tracking-tight text-white">Vibe<span class="text-sky-400">Trading</span></span>
+            </a>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+            <!-- Language Selector Switch -->
+            <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700/50 rounded-full p-1 select-none">
+                <span class="text-xs font-bold px-2 text-sky-400" id="lang-label-fr">FR</span>
+                <label for="langToggle" class="flex items-center cursor-pointer relative">
+                    <input type="checkbox" id="langToggle" class="sr-only">
+                    <div class="w-10 h-6 bg-slate-700 rounded-full transition-colors duration-300"></div>
+                    <div class="toggle-dot absolute left-1 top-1 bg-sky-400 w-4 h-4 rounded-full shadow transition-transform duration-300"></div>
+                </label>
+                <span class="text-xs font-bold px-2 text-slate-400" id="lang-label-ht">HT</span>
+            </div>
+
+            <!-- Home / Dashboard Buttons -->
+            <a href="index.html" class="hidden md:flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors font-medium">
+                <i data-lucide="home" class="w-4 h-4"></i>
+                <span>Accueil</span>
+            </a>
+            <a href="dashboard.html" class="p-2.5 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-semibold hover:shadow-[0_4px_15px_rgba(14,165,233,0.3)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 shrink-0">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 md:w-4 md:h-4"></i>
+                <span class="hidden md:inline lang-fr">Tableau de Bord</span>
+                <span class="hidden md:inline lang-ht hidden">Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:py-12 z-20">
+        
+        <!-- INTRO -->
+        <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-semibold mb-4">
+                <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+                <span class="lang-fr">Guide Pas à Pas</span>
+                <span class="lang-ht hidden">Etap pa Etap</span>
+            </div>
+            
+            <h1 class="text-3xl sm:text-5xl font-extrabold font-heading tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
+                <span class="lang-fr">Comment démarrer avec Vibe Trading</span>
+                <span class="lang-ht hidden">Kijan pou kòmanse ak Vibe Trading</span>
+            </h1>
+            
+            <p class="text-slate-400 text-base sm:text-lg">
+                <span class="lang-fr">Suivez ces étapes simples pour configurer votre compte de trading et laisser notre intelligence artificielle trader pour vous en toute sécurité.</span>
+                <span class="lang-ht hidden">Swiv etap senp sa yo pou w konfigire kont trading ou epi kite entèlijans atifisyèl nou an fè tranzaksyon pou ou an toute sekirite.</span>
+            </p>
+        </div>
+
+        <!-- TIMELINE ROADMAP -->
+        <div class="space-y-6">
+
+            <!-- STEP 1 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">01</span>
+                </div>
+                <div class="flex-1 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="text-xl font-bold text-white font-heading">
+                            <span class="lang-fr">Étape 1 : Création du compte chez le Broker Partenaire</span>
+                            <span class="lang-ht hidden">Etap 1 : Kreye kont ou kay Broker Patnè a</span>
+                        </h3>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide">
+                            <span class="lang-fr">Obligatoire</span>
+                            <span class="lang-ht hidden">Obligatwa</span>
+                        </span>
+                    </div>
+                    
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Inscrivez-vous sur le broker recommandé en utilisant notre lien partenaire officiel ci-dessous. Cette liaison permet d'assurer une compatibilité technique totale avec l'algorithme de trading <strong>SSED V2</strong>.</span>
+                        <span class="lang-ht hidden">Enskri sou broker nou rekòmande a lè w sèvi ak lyen ofisyèl patnè nou an ki anba a. Sa pèmèt nou garanti koneksyon teknik la ap mache 100% ak algoritm trading <strong>SSED V2</strong> a.</span>
+                    </p>
+
+                    <div class="pt-2">
+                        <a href="https://fusionmarkets.com/?refcode=114047" target="_blank" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:-translate-y-0.5 transition-all text-sm">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            <span class="lang-fr">Créer mon compte Broker</span>
+                            <span class="lang-ht hidden">Kreye kont Broker mwen</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">02</span>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-white font-heading">
+                        <span class="lang-fr">Étape 2 : Vérification du compte (KYC)</span>
+                        <span class="lang-ht hidden">Etap 2 : Verifikasyon kont la (KYC)</span>
+                    </h3>
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Une fois inscrit, accédez à votre profil sur la plateforme du broker et effectuez la vérification d'identité en téléchargeant une photo de votre pièce d'identité officielle (CIN/NIF, Passeport ou Permis de conduire).</span>
+                        <span class="lang-ht hidden">Lè w fin enskri, ale sou pwofil ou nan espas kliyan broker a epi fè verifikasyon idantite w. W ap bezwen voye yon foto pyès idantite w (CIN/NIF, Paspo oswa Lisans chofè).</span>
+                    </p>
+                    <div class="p-3 rounded-lg bg-sky-500/5 border border-sky-500/10 text-xs text-sky-400 flex items-start gap-2 max-w-2xl">
+                        <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                        <span class="lang-fr">Cette étape de conformité légale est indispensable pour pouvoir retirer vos gains en toute sécurité par la suite.</span>
+                        <span class="lang-ht hidden">Etap sa a enpòtan anpil pou lalwa, epi se li k ap pèmèt ou retire pwofi ou fè yo an sekirite pita.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">03</span>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-white font-heading">
+                        <span class="lang-fr">Étape 3 : Ouvrir un compte Réel MT5 (Live Account)</span>
+                        <span class="lang-ht hidden">Etap 3 : Louvri yon kont Reyèl MT5 (Live Account)</span>
+                    </h3>
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Créez un compte de trading **Réel** de type **MetaTrader 5 (MT5)** sur le site du broker. Le broker générera vos informations d'accès et vous les enverra par e-mail. Vous recevrez :</span>
+                        <span class="lang-ht hidden">Kreye yon kont trading **Reyèl** ki sèvi ak platfòm **MetaTrader 5 (MT5)** sou sit broker a. Broker a ap jenere detay kont lan epi l ap voye yo nan email ou. W ap jwenn :</span>
+                    </p>
+                    
+                    <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 max-w-3xl">
+                        <li class="p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 flex flex-col">
+                            <span class="text-xs text-slate-500 font-semibold uppercase">Login ID</span>
+                            <span class="text-sm font-bold text-slate-200 mt-1">Ex: 63446209</span>
+                        </li>
+                        <li class="p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 flex flex-col">
+                            <span class="text-xs text-slate-500 font-semibold uppercase">Mot de Passe / Modpas</span>
+                            <span class="text-sm font-bold text-slate-200 mt-1">Ex: Master Password</span>
+                        </li>
+                        <li class="p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 flex flex-col">
+                            <span class="text-xs text-slate-500 font-semibold uppercase">Serveur / Sèvè</span>
+                            <span class="text-sm font-bold text-slate-200 mt-1">Ex: OctaFX-Real</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">04</span>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-white font-heading">
+                        <span class="lang-fr">Étape 4 : Effectuer un dépôt (Min. 20 USD)</span>
+                        <span class="lang-ht hidden">Etap 4 : Fè yon depo (Minimòm 20 USD)</span>
+                    </h3>
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Faites un dépôt sur votre compte de trading MT5. Le capital minimal recommandé pour que le robot puisse placer des ordres est de <strong>20 USD (environ 2 700 HTG)</strong>.</span>
+                        <span class="lang-ht hidden">Fè yon depo sou kont trading MT5 ou sot kreye a. Kantite kòb minimòm ki dwe sou kont lan pou bot la ka travay se <strong>20 USD (anviwon 2 700 HTG)</strong>.</span>
+                    </p>
+                    <p class="text-slate-400 text-sm">
+                        <span class="lang-fr">💡 Vous pouvez effectuer ce dépôt directement par <strong>Cryptomonnaies</strong> (USDT, BTC, LTC, etc.) sur la plateforme du broker ou via les options locales disponibles.</span>
+                        <span class="lang-ht hidden">💡 Ou ka fè depo sa a fasilman pa <strong>Kriptomobil</strong> (USDT, BTC, LTC, elatriye) dirèkteman sou sit broker a oswa ak lòt mwayen lokal ki disponib yo.</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- STEP 5 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">05</span>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-white font-heading">
+                        <span class="lang-fr">Étape 5 : Connecter le compte MT5 à Vibe Trading</span>
+                        <span class="lang-ht hidden">Etap 5 : Konekte kont MT5 ou ak Vibe Trading</span>
+                    </h3>
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Rendez-vous dans votre espace membre Vibe Trading, puis accédez à l'onglet <a href="dashboard.html" class="text-sky-400 hover:underline">Connexion MT5</a>. Remplissez le formulaire en saisissant : votre <strong>Login ID</strong>, votre <strong>Mot de passe</strong> et le <strong>Serveur MT5</strong>.</span>
+                        <span class="lang-ht hidden">Ale sou espas manm Vibe Trading ou a, epi klike sou onglet <a href="dashboard.html" class="text-sky-400 hover:underline">Connexion MT5</a>. Ranpli fòmilè a ak : <strong>Login ID</strong> ou, <strong>Modpas</strong> ou, epi non <strong>Sèvè MT5</strong> a.</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- STEP 6 -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                    <span class="font-heading font-extrabold text-2xl step-number-gradient">06</span>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-white font-heading">
+                        <span class="lang-fr">Étape 6 : Activation et Trading Automatique</span>
+                        <span class="lang-ht hidden">Etap 6 : Limen Bot la pou l kòmanse trade</span>
+                    </h3>
+                    <p class="text-slate-300">
+                        <span class="lang-fr">Dès que vos identifiants sont enregistrés et que votre solde MT5 dépasse 20 USD, notre robot détecte automatiquement votre compte. Dès que le marché est actif et que l'algorithme génère des opportunités lors de la <strong>session de Londres</strong>, les positions s'ouvriront et se fermeront sur votre compte de manière 100% autonome.</span>
+                        <span class="lang-ht hidden">Kou detay kont ou fin anrejistre epi balans MT5 ou a depase 20 USD, robot nou an ap detekte kont la otomatikman. Depi mache a louvri epi algoritm nan jwenn siyal pandan <strong>sesyon Lond</strong> lan, pozisyon yo ap louvri epi fèmen sou kont ou otomatikman san ou pa bezwen fè anyen.</span>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SAFETY & CONTROL BANNER -->
+        <div class="mt-12 p-6 sm:p-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col md:flex-row gap-6 items-start">
+            <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+                <i data-lucide="shield-check" class="w-8 h-8"></i>
+            </div>
+            <div class="space-y-2">
+                <h4 class="text-lg font-bold text-emerald-400 font-heading">
+                    <span class="lang-fr">Sécurité et Contrôle Absolu de vos Fonds</span>
+                    <span class="lang-ht hidden">Sekirite ak Kontwòl Total sou kòb ou</span>
+                </h4>
+                <div class="text-sm text-slate-300 space-y-2">
+                    <p class="lang-fr">
+                        <strong>Vibe Trading n'a aucun accès à votre argent.</strong> Vos fonds restent en toute sécurité sur votre propre compte de trading chez le Broker. 
+                        Notre système utilise exclusivement l'API sécurisée de MetaTrader 5 pour envoyer les signaux d'achat et de vente. 
+                    </p>
+                    <p class="lang-fr">
+                        Il nous est <strong>techniquement impossible</strong> d'effectuer des retraits, des virements ou de bloquer votre capital. Vous êtes le seul et unique gestionnaire de votre argent (dépôts et retraits).
+                    </p>
+                    
+                    <p class="lang-ht hidden">
+                        <strong>Vibe Trading pa gen okenn aksè ak kòb ou.</strong> Kòb ou rete an sekirite nan men Broker a sou pwòp kont trading pa w. 
+                        Sistèm nou an sèvi sèlman ak API MetaTrader 5 la pou voye lòd achte (BUY) ak vann (SELL) otomatikman.
+                    </p>
+                    <p class="lang-ht hidden">
+                        Li <strong>teknikman enposib</strong> pou nou ta retire kòb sou kont ou, fè transfè oswa bloke kapital ou. Se ou sèl ki gen kontwòl ak dwa sou kòb ou (pou mete oswa retire li).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUPPORT & WHATSAPP GROUP BANNER -->
+        <div class="mt-8 p-6 sm:p-8 rounded-2xl glass-card border border-emerald-500/30 flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div class="flex flex-col md:flex-row gap-6 items-start">
+                <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+                    <i data-lucide="message-square" class="w-8 h-8"></i>
+                </div>
+                <div class="space-y-1">
+                    <h4 class="text-lg font-bold text-white font-heading">
+                        <span class="lang-fr">Besoin d'aide pour connecter votre compte ?</span>
+                        <span class="lang-ht hidden">Ou bezwen èd pou konekte kont ou ?</span>
+                    </h4>
+                    <p class="text-sm text-slate-300">
+                        <span class="lang-fr">Rejoignez notre groupe WhatsApp d'entraide Vibe Trading. Notre équipe et la communauté sont là pour vous guider en direct.</span>
+                        <span class="lang-ht hidden">Antre nan gwoup WhatsApp Vibe Trading la pou w ka jwenn sipò. Ekip nou an ak kominote a la pou gide w an dirèk.</span>
+                    </p>
+                </div>
+            </div>
+            <a href="https://chat.whatsapp.com/I0Qnm9WXXeBBzKiRipArFd?s=cl&p=i&ilr=2" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#25D366] text-white font-bold hover:bg-[#20ba59] hover:shadow-[0_0_20px_rgba(37,211,102,0.3)] hover:-translate-y-0.5 transition-all text-sm shrink-0">
+                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                <span class="lang-fr">Rejoindre le Groupe WhatsApp</span>
+                <span class="lang-ht hidden">Antre nan Gwoup WhatsApp la</span>
+            </a>
+        </div>
+
+        <!-- FOOTER GUIDE LINK -->
+        <div class="text-center mt-12">
+            <a href="dashboard.html" class="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span class="lang-fr">Retourner au Tableau de Bord</span>
+                <span class="lang-ht hidden">Tounen sou Dashboard la</span>
+            </a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full py-6 border-t border-slate-800/80 text-center text-xs text-slate-500 z-20 mt-auto bg-slate-950/40">
+        <p>&copy; 2026 Vibe Trading. <span class="lang-fr">Le trading comporte des risques.</span><span class="lang-ht hidden">Trading gen risk ladan l.</span></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Language toggle logic
+        const toggle = document.getElementById('langToggle');
+        const frLabels = document.querySelectorAll('.lang-fr');
+        const htLabels = document.querySelectorAll('.lang-ht');
+        const labelFr = document.getElementById('lang-label-fr');
+        const labelHt = document.getElementById('lang-label-ht');
+
+        toggle.addEventListener('change', function() {
+            if (this.checked) {
+                // Switch to HT
+                frLabels.forEach(el => el.classList.add('hidden'));
+                htLabels.forEach(el => el.classList.remove('hidden'));
+                labelFr.classList.remove('text-sky-400');
+                labelFr.classList.add('text-slate-400');
+                labelHt.classList.add('text-sky-400');
+                labelHt.classList.remove('text-slate-400');
+            } else {
+                // Switch to FR
+                frLabels.forEach(el => el.classList.remove('hidden'));
+                htLabels.forEach(el => el.classList.add('hidden'));
+                labelFr.classList.add('text-sky-400');
+                labelFr.classList.remove('text-slate-400');
+                labelHt.classList.remove('text-sky-400');
+                labelHt.classList.add('text-slate-400');
+            }
+        });
+    </script>
+</body>
+</html>

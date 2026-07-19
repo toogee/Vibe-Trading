@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Trading — Créer un Compte | Rejoignez le Bot GBPUSD</title>
+    <meta name="description" content="Créez votre compte Vibe Trading et commencez à trader le GBPUSD automatiquement grâce à notre IA SSED V2. Plans Starter, Pro et VIP Elite disponibles.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://vibe-trading-phi.vercel.app/signup.html">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0ea5e9">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Vibe Trading — Créer un Compte">
+    <meta property="og:description" content="Rejoignez Vibe Trading. Bot GBPUSD, session de Londres, trading automatique. Plans dès $49/mois.">
+    <meta property="og:url" content="https://vibe-trading-phi.vercel.app/signup.html">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html, body {
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #020617; /* slate-950 */
+            color: #f8fafc;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Animated Blobs Background */
+        .bg-blobs {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(100px);
+            border-radius: 50%;
+            animation: float 20s infinite alternate ease-in-out;
+            opacity: 0.4;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 600px; height: 600px; background: #0ea5e9; }
+        .blob-2 { bottom: -20%; right: -10%; width: 700px; height: 700px; background: #2563eb; animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; background: #3b82f6; animation-delay: -10s; opacity: 0.2; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 30px) scale(1.1); }
+            100% { transform: translate(-30px, -50px) scale(0.9); }
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.15);
+            animation: cardFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @keyframes cardFadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Inputs */
+        .input-group { position: relative; }
+        .input-field {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            transition: color 0.3s ease;
+            pointer-events: none;
+        }
+        .input-group:focus-within .input-icon { color: #38bdf8; }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(to right, #0ea5e9, #2563eb);
+            color: white;
+            font-weight: 600;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-social {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        .btn-social:hover { background: rgba(51, 65, 85, 0.8); }
+
+        /* Checkbox styling */
+        .custom-checkbox input:checked + div {
+            background-color: #0ea5e9;
+            border-color: #0ea5e9;
+        }
+        .custom-checkbox input:checked + div svg { transform: scale(1); }
+        .custom-checkbox div svg { transform: scale(0); transition: transform 0.2s ease; }
+        
+        .req-met { color: #34d399; }
+        .req-unmet { color: #64748b; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none; }
+        .toast { pointer-events: auto; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(51, 65, 85, 0.6); color: white; padding: 1rem 1.25rem; border-radius: 1rem; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5); display: flex; align-items: center; gap: 0.875rem; transform: translateX(120%); opacity: 0; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 300px; max-width: 400px; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast-icon { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.6rem; flex-shrink: 0; }
+        .toast-success .toast-icon { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+        .toast-error .toast-icon { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
+        .toast-content { flex-grow: 1; }
+        .toast-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: #f8fafc; }
+        .toast-message { font-size: 0.85rem; color: #94a3b8; line-height: 1.4; }
+    </style>
+
+    <!-- Disable pinch zoom on iOS Safari -->
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-8">
+
+    <!-- Background -->
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="w-full max-w-[440px] z-10">
+        <div class="glass-card rounded-[2rem] px-8 py-6 sm:px-10 sm:py-8 relative overflow-hidden ring-1 ring-white/10 shadow-2xl shadow-blue-900/20">
+            <!-- Glare effect -->
+            <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"></div>
+
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(56,189,248,0.3)] border border-sky-400/30">
+                    <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
+                </div>
+                <h1 class="font-heading text-2xl font-bold mb-2 tracking-tight text-white">Créer un Compte</h1>
+                <p class="text-slate-400 text-[13px] max-w-[90%] mx-auto leading-relaxed">
+                    Rejoignez <span class="text-sky-400 font-semibold">Vibe Trading</span> et accédez à notre dashboard de scalping automatisé GBPUSD.
+                </p>
+            </div>
+
+            <!-- Form -->
+            <form id="signupForm" class="space-y-3">
+                <!-- Name & Username -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="input-group">
+                        <i data-lucide="user" class="w-5 h-5 input-icon"></i>
+                        <input type="text" id="fullName" placeholder="Nom Complet" required class="input-field">
+                    </div>
+                    <div class="input-group">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium input-icon" style="left: 1.25rem;">@</span>
+                        <input type="text" id="username" placeholder="Pseudo" required class="input-field pl-12">
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="input-group">
+                    <i data-lucide="mail" class="w-5 h-5 input-icon"></i>
+                    <input type="email" id="email" placeholder="Adresse Email" required class="input-field">
+                </div>
+
+                <!-- Password -->
+                <div class="input-group">
+                    <i data-lucide="lock" class="w-5 h-5 input-icon"></i>
+                    <input type="password" id="password" placeholder="Mot de passe" required class="input-field pr-12">
+                    <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-400 transition-colors">
+                        <i data-lucide="eye" class="w-5 h-5" id="eyeIcon"></i>
+                    </button>
+                </div>
+
+                <!-- Password Requirements -->
+                <div id="pwdReqs" class="flex justify-between items-center px-2 text-xs overflow-hidden transition-all duration-300 h-0 opacity-0">
+                    <div class="flex gap-4">
+                        <span id="reqLength" class="flex items-center gap-1 transition-colors req-unmet">
+                            <i data-lucide="check" class="w-3 h-3"></i> 8+ Caractères
+                        </span>
+                        <span id="reqUpper" class="flex items-center gap-1 transition-colors req-unmet">
+                            <i data-lucide="check" class="w-3 h-3"></i> Majuscule
+                        </span>
+                        <span id="reqNum" class="flex items-center gap-1 transition-colors req-unmet">
+                            <i data-lucide="check" class="w-3 h-3"></i> Chiffre
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="input-group">
+                    <i data-lucide="lock" class="w-5 h-5 input-icon"></i>
+                    <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe" required class="input-field pr-12">
+                    <button type="button" id="toggleConfirm" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-400 transition-colors">
+                        <i data-lucide="eye" class="w-5 h-5" id="eyeConfirmIcon"></i>
+                    </button>
+                </div>
+
+                <!-- Terms -->
+                <div class="flex items-start gap-3 mt-2">
+                    <div class="flex items-center h-5 mt-0.5">
+                        <input id="terms" type="checkbox" required class="w-4 h-4 rounded border-slate-700 bg-slate-800/50 text-sky-500 focus:ring-sky-500 focus:ring-offset-slate-900 cursor-pointer">
+                    </div>
+                    <label for="terms" class="text-[13px] text-slate-400 leading-tight">
+                        J'accepte les <a href="#" class="text-sky-400 hover:text-sky-300 transition-colors">Conditions d'utilisation</a> et la <a href="#" class="text-sky-400 hover:text-sky-300 transition-colors">Politique de confidentialité</a>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" disabled class="btn-primary mt-4 group">
+                    <span id="btnText" class="flex items-center gap-2">
+                        Créer mon compte
+                        <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                    </span>
+                    <i data-lucide="loader-2" id="spinner" class="w-5 h-5 animate-spin hidden"></i>
+                </button>
+            </form>
+
+
+
+            <!-- Login Link -->
+            <div class="mt-5 text-center text-sm text-slate-400">
+                Vous avez déjà un compte ?
+                <a href="login.html" class="text-sky-400 font-semibold hover:text-sky-300 hover:underline underline-offset-4 transition-all">
+                    Se Connecter
+                </a>
+            </div>
+            
+            <!-- Link back to home -->
+            <div class="mt-3 text-center">
+                <a href="index.html" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                    &larr; Retour à l'accueil
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+
+    <script>
+        // Toast Notification System
+        function showToast(title, message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons({ root: toast });
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    toast.classList.add('show');
+                });
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 500);
+            }, 4000);
+        }
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Elements
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirmPassword');
+        const togglePassword = document.getElementById('togglePassword');
+        const toggleConfirm = document.getElementById('toggleConfirm');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const eyeConfirmIcon = document.getElementById('eyeConfirmIcon');
+        
+        const pwdReqs = document.getElementById('pwdReqs');
+        const reqLength = document.getElementById('reqLength');
+        const reqUpper = document.getElementById('reqUpper');
+        const reqNum = document.getElementById('reqNum');
+        
+        const termsCheck = document.getElementById('terms');
+        const submitBtn = document.getElementById('submitBtn');
+        const signupForm = document.getElementById('signupForm');
+
+        // Toggle Password Visibility
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            eyeIcon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        });
+
+        toggleConfirm.addEventListener('click', () => {
+            const type = confirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmInput.setAttribute('type', type);
+            eyeConfirmIcon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        });
+
+        // Password Validation Logic
+        let isValid = { length: false, upper: false, num: false, match: false, terms: false };
+
+        function checkFormValidity() {
+            const allValid = Object.values(isValid).every(Boolean);
+            submitBtn.disabled = !allValid;
+        }
+
+        passwordInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            
+            // Show requirements box if typing
+            if (val.length > 0) {
+                pwdReqs.style.height = '20px';
+                pwdReqs.style.opacity = '1';
+                pwdReqs.style.marginTop = '0.5rem';
+            } else {
+                pwdReqs.style.height = '0';
+                pwdReqs.style.opacity = '0';
+                pwdReqs.style.marginTop = '0';
+            }
+
+            // Length >= 8
+            isValid.length = val.length >= 8;
+            reqLength.className = `flex items-center gap-1 transition-colors ${isValid.length ? 'req-met' : 'req-unmet'}`;
+
+            // Uppercase
+            isValid.upper = /[A-Z]/.test(val);
+            reqUpper.className = `flex items-center gap-1 transition-colors ${isValid.upper ? 'req-met' : 'req-unmet'}`;
+
+            // Number
+            isValid.num = /[0-9]/.test(val);
+            reqNum.className = `flex items-center gap-1 transition-colors ${isValid.num ? 'req-met' : 'req-unmet'}`;
+
+            // Re-check match
+            checkMatch();
+        });
+
+        // Confirm Password Match
+        function checkMatch() {
+            const val1 = passwordInput.value;
+            const val2 = confirmInput.value;
+            
+            if (val2.length > 0 && val1 !== val2) {
+                confirmInput.style.borderColor = '#ef4444'; // Red
+                isValid.match = false;
+            } else {
+                confirmInput.style.borderColor = '';
+                isValid.match = (val1 === val2 && val1.length > 0);
+            }
+            checkFormValidity();
+        }
+
+        confirmInput.addEventListener('input', checkMatch);
+
+        // Terms Checkbox
+        termsCheck.addEventListener('change', (e) => {
+            isValid.terms = e.target.checked;
+            checkFormValidity();
+        });
+
+        // Other required fields check
+        const textInputs = document.querySelectorAll('input[type="text"], input[type="email"]');
+        textInputs.forEach(input => {
+            input.addEventListener('input', checkFormValidity);
+        });
+
+        // Submit Animation
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            submitBtn.disabled = true;
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('spinner').classList.remove('hidden');
+
+            const email = document.getElementById('email').value;
+            const password = passwordInput.value;
+            const fullName = document.getElementById('fullName').value;
+            const username = document.getElementById('username').value;
+
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/verify.html',
+                        data: {
+                            full_name: fullName,
+                            username: username
+                        }
+                    }
+                });
+
+                if (error) throw error;
+                
+                showToast("Succès", "Inscription réussie ! Vous pouvez maintenant vous connecter.", "success");
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            } catch (error) {
+                let msg = error.message;
+                if(msg.includes('User already registered')) msg = "Cet email est déjà utilisé.";
+                showToast("Erreur", msg, "error");
+                submitBtn.disabled = false;
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('spinner').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
