@@ -90,7 +90,7 @@ SWING_LOOKBACK = 5
 ZONE_TOLERANCE_PIPS = 5
 
 # Consolidation / low-volatility filter
-MIN_CANDLE_BODY_PIPS = 2.0   # Minimum candle body to consider non-weak
+MIN_CANDLE_BODY_PIPS = 0.8   # Minimum candle body to consider non-weak
 ADR_CONSOLIDATION_RATIO = 0.3  # If candle range < 30% of ADR → consolidating
 
 # Trend detection lookback in M1 bars
