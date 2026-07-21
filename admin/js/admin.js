@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     // Verifier admin par role OU par email
-    const ADMIN_EMAILS = ['tidem999@gmail.com'];
+    const ADMIN_EMAILS = ['tidem999@gmail.com', 'michelsonmichel99@yahoo.fr'];
     const isAdmin = user?.app_metadata?.role === 'admin'
                  || ADMIN_EMAILS.includes(user?.email);
 
