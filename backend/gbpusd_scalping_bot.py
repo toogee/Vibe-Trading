@@ -1133,10 +1133,24 @@ def check_closed_trades():
                             status_text = "Stop Loss atteint 🛑"
                         reason_label = f" ({close_reason})" if close_reason else ""
                         
-                        # Extract strategy from deal comment
+                        # Extract strategy from entry deal comment
                         strategy_label = "Inconnue"
-                        if found_deal and getattr(deal, "comment", None):
+                        
+                        # Find the entry deal of this position to read the original comment
+                        entry_deal = None
+                        if found_deal and deals:
+                            for d in deals:
+                                if getattr(d, "position_id", None) == getattr(deal, "position_id", None) and getattr(d, "entry", None) == mt5.DEAL_ENTRY_IN:
+                                    entry_deal = d
+                                    break
+                        
+                        cmt = None
+                        if entry_deal and getattr(entry_deal, "comment", None):
+                            cmt = entry_deal.comment
+                        elif found_deal and getattr(deal, "comment", None):
                             cmt = deal.comment
+                            
+                        if cmt:
                             if "Vibe_DIRECT" in cmt:
                                 strategy_label = "DIRECT TRIGGER"
                             elif "Vibe_SCORE" in cmt:
