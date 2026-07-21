@@ -803,7 +803,7 @@ def get_open_position(magic: int) -> Optional[object]:
                 return pos
     return None
 
-def place_order_for_all_users(direction: str, atr: float) -> bool:
+def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> bool:
     """
     Loop through all active users in Supabase, switch MT5 account, and place order.
     Returns True if at least one trade was placed.
@@ -820,6 +820,14 @@ def place_order_for_all_users(direction: str, atr: float) -> bool:
     sl_distance = atr * ATR_SL_MULTIPLIER
     tp_distance = sl_distance * RISK_REWARD_RATIO
     sl_pips = sl_distance / PIP_VALUE
+
+    # Format comment for MT5 (max 31 chars)
+    comment_str = "Vibe_Bot"
+    if "DIRECT" in trigger_type:
+        comment_str = "Vibe_DIRECT"
+    elif "SCORE" in trigger_type:
+        score_part = trigger_type.split("(")[1].split("/")[0] if "(" in trigger_type else "SCORE"
+        comment_str = f"Vibe_SCORE_{score_part}"
 
     for user_id in active_users:
         mt5_acc = get_user_mt5_account(user_id)
@@ -913,7 +921,7 @@ def place_order_for_all_users(direction: str, atr: float) -> bool:
                 "tp":        round(tp, 5),
                 "deviation": 10,
                 "magic":     MAGIC_NUMBER,
-                "comment":   "Vibe_Trading_Bot",
+                "comment":   comment_str,
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": filling_mode,
             }
@@ -1124,8 +1132,22 @@ def check_closed_trades():
                             emoji       = "❌"
                             status_text = "Stop Loss atteint 🛑"
                         reason_label = f" ({close_reason})" if close_reason else ""
+                        
+                        # Extract strategy from deal comment
+                        strategy_label = "Inconnue"
+                        if found_deal and getattr(deal, "comment", None):
+                            cmt = deal.comment
+                            if "Vibe_DIRECT" in cmt:
+                                strategy_label = "DIRECT TRIGGER"
+                            elif "Vibe_SCORE" in cmt:
+                                score_val = cmt.replace("Vibe_SCORE_", "")
+                                strategy_label = f"SCORE SYSTEM ({score_val}/10)"
+                            else:
+                                strategy_label = cmt
+
                         telegram_notifier.send_message(
-                            f"{emoji} *{status_text} sur GBP/USD !*{reason_label}"
+                            f"{emoji} *{status_text} sur GBP/USD !*{reason_label}\n"
+                            f"Stratégie: `{strategy_label}`"
                         )
 
             except Exception as e:
@@ -1573,7 +1595,7 @@ def run():
             signal, atr, trigger_type = evaluate_signal()
 
             if signal in ("buy", "sell"):
-                if place_order_for_all_users(signal, atr):
+                if place_order_for_all_users(signal, atr, trigger_type):
                     sl_p = atr * ATR_SL_MULTIPLIER / PIP_VALUE
                     tp_p = sl_p * RISK_REWARD_RATIO
                     telegram_notifier.send_message(

@@ -14,11 +14,59 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+from datetime import datetime, timezone, timedelta
+
 def get_active_users():
-    """Fetches users who have an ACTIVE subscription status."""
+    """Fetches users who have an ACTIVE subscription status, deactivating expired ones."""
     try:
-        response = supabase.table("subscriptions").select("user_id").eq("status", "ACTIVE").execute()
-        return [sub['user_id'] for sub in response.data]
+        response = supabase.table("subscriptions").select("*").eq("status", "ACTIVE").execute()
+        if not response.data:
+            return []
+
+        active_user_ids = []
+        now = datetime.now(timezone.utc)
+
+        for sub in response.data:
+            created_at_str = sub.get("created_at")
+            if not created_at_str:
+                continue
+
+            # Convert created_at to timezone-aware datetime object
+            created_at_str = created_at_str.replace("Z", "+00:00")
+            try:
+                activation_date = datetime.fromisoformat(created_at_str)
+            except Exception as parse_err:
+                logging.error(f"Error parsing created_at for sub {sub.get('id')}: {parse_err}")
+                continue
+
+            # Determine duration based on plan name
+            plan_name = sub.get("plan_name", "").lower()
+            duration_days = 30
+            if "pro" in plan_name:
+                duration_days = 90
+            elif "vip" in plan_name:
+                duration_days = 180
+
+            expiration_date = activation_date + timedelta(days=duration_days)
+
+            if now > expiration_date:
+                # Subscription has expired. Update status to INACTIVE
+                user_id = sub.get("user_id")
+                sub_id = sub.get("id")
+                logging.info(f"Subscription {sub_id} for user {user_id} has expired on {expiration_date}. Setting status to INACTIVE.")
+                try:
+                    supabase.table("subscriptions").update({"status": "INACTIVE"}).eq("id", sub_id).execute()
+                    # Also update their MT5 account status to DISCONNECTED in DB
+                    acc_response = supabase.table("mt5_accounts").select("id").eq("user_id", user_id).execute()
+                    if acc_response.data:
+                        for acc in acc_response.data:
+                            update_mt5_status(acc["id"], "DISCONNECTED")
+                except Exception as db_err:
+                    logging.error(f"Error deactivating expired subscription/account for user {user_id}: {db_err}")
+            else:
+                active_user_ids.append(sub.get("user_id"))
+
+        return active_user_ids
     except Exception as e:
         logging.error(f"Error fetching active users: {e}")
         return []

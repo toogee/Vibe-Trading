@@ -2101,6 +2101,37 @@
                             headerPlanBadge.className = "px-3 py-1 text-xs font-bold rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 hidden sm:flex items-center gap-1 cursor-pointer transition-all";
                             headerPlanBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></div> EN ATTENTE`;
                         }
+                    } else if (sub.status === 'INACTIVE') {
+                        statusBadge.className = "badge px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1";
+                        statusBadge.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i> EXPIRÉ`;
+                        statusContainer.className = "glass-card rounded-2xl p-6 mb-12 border-l-4 border-l-rose-500 relative overflow-hidden";
+                        
+                        // Update Plan Badge in header
+                        const headerPlanBadge = document.getElementById('headerPlanBadge');
+                        if (headerPlanBadge) {
+                            headerPlanBadge.className = "px-3 py-1 text-xs font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 hidden sm:flex items-center gap-1 cursor-pointer transition-all";
+                            headerPlanBadge.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div> EXPIRÉ`;
+                        }
+                        
+                        // Calculate dates
+                        const activationDate = new Date(sub.created_at);
+                        let durationDays = 30;
+                        if (planName.toLowerCase().includes('pro')) durationDays = 90;
+                        if (planName.toLowerCase().includes('vip')) durationDays = 180;
+                        
+                        const expirationDate = new Date(activationDate);
+                        expirationDate.setDate(expirationDate.getDate() + durationDays);
+                        
+                        const elActivation = document.getElementById('activationDateDisplay');
+                        const elExpiration = document.getElementById('expirationDateDisplay');
+                        const elDaysLeft = document.getElementById('daysLeftDisplay');
+                        
+                        if (elActivation) elActivation.innerText = activationDate.toLocaleDateString();
+                        if (elExpiration) elExpiration.innerText = expirationDate.toLocaleDateString();
+                        if (elDaysLeft) {
+                            elDaysLeft.innerText = "0";
+                            elDaysLeft.className = "font-medium text-rose-400";
+                        }
                     } else {
                         statusBadge.className = "badge px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1";
                         statusBadge.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3"></i> REJETÉ`;
