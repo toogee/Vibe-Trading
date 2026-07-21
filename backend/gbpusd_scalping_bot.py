@@ -1343,7 +1343,7 @@ def sync_all_balances():
 # CORE SIGNAL LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
-def evaluate_signal() -> Tuple[Optional[str], float]:
+def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     """
     Full signal evaluation pipeline combining scoring system (6.5/10)
     and direct trigger logic:
@@ -1352,25 +1352,25 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
     - Zone de support/résistance requise (Supply/Demand)
     - Validation de la tendance via SMA50 et EMA200
     - IA Sentiment validation via Gemini
-    Returns: (direction, atr_value) -> ('buy'/'sell'/None, float)
+    Returns: (direction, atr_value, trigger_type) -> ('buy'/'sell'/None, float, str/None)
     """
     # ── 1. Fetch M1 data ────────────────────────────────────────────────────
     df_m1_raw = get_bars(mt5.TIMEFRAME_M1, 300)
     if df_m1_raw is None or len(df_m1_raw) < 150:
         log.debug("Not enough M1 data.")
-        return None, 0.0
+        return None, 0.0, None
 
     df_m1 = add_indicators(df_m1_raw)
 
     # Use only rows where indicators are valid
     df = df_m1.dropna(subset=["vwap", "atr", "stoch_k", "stoch_d", "sma50", "ema200"]).copy()
     if len(df) < 20:
-        return None, 0.0
+        return None, 0.0, None
 
     # ── 2. Consolidation ─────────────────────────────────────────────────────
     if is_consolidating(df, lookback=10):
         log.info("M1 consolidating — skipping.")
-        return None, 0.0
+        return None, 0.0, None
 
     # ── 3. Indicators at last closed bar ─────────────────────────────────────
     last_closed = df.iloc[-2]  # -1 is still forming
@@ -1460,19 +1460,19 @@ def evaluate_signal() -> Tuple[Optional[str], float]:
             if direction == "buy" and sentiment_score < -0.2:
                 log.warning(f"🚫 Technical BUY setup ignored: Bearish market sentiment (Score: {sentiment_score})")
                 telegram_notifier.send_message(f"⚠️ *Trade BUY annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Baissier)")
-                return None, 0.0
+                return None, 0.0, None
             if direction == "sell" and sentiment_score > 0.2:
                 log.warning(f"🚫 Technical SELL setup ignored: Bullish market sentiment (Score: {sentiment_score})")
                 telegram_notifier.send_message(f"⚠️ *Trade SELL annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Haussier)")
-                return None, 0.0
+                return None, 0.0, None
                 
             log.info(f"✅ Trade validated by Sentiment Filter! Score = {sentiment_score}")
         else:
             log.debug("Sentiment filter is disabled (No API key). Skipping sentiment validation.")
 
-        return direction, atr
+        return direction, atr, trigger_type
 
-    return None, 0.0
+    return None, 0.0, None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -1570,13 +1570,17 @@ def run():
                 continue
 
             # ── Signal evaluation ────────────────────────────────────────────
-            signal, atr = evaluate_signal()
+            signal, atr, trigger_type = evaluate_signal()
 
             if signal in ("buy", "sell"):
                 if place_order_for_all_users(signal, atr):
                     sl_p = atr * ATR_SL_MULTIPLIER / PIP_VALUE
                     tp_p = sl_p * RISK_REWARD_RATIO
-                    telegram_notifier.send_message(f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*\nSL: `{sl_p:.1f}` pips | TP: `{tp_p:.1f}` pips")
+                    telegram_notifier.send_message(
+                        f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*\n"
+                        f"SL: `{sl_p:.1f}` pips | TP: `{tp_p:.1f}` pips\n"
+                        f"Stratégie: `{trigger_type}`"
+                    )
                     last_trade_time = current_time
                 else:
                     telegram_notifier.send_message(f"❌ *Erreur de transaction :* Signal {signal.upper()} détecté mais l'ordre n'a pas pu être placé sur les comptes.")
