@@ -1562,8 +1562,8 @@ def run():
                 update_bot_heartbeat()
                 last_heartbeat_time = current_time
 
-            # Active surveillance: Send "Bot Active" every hour if no trades occurred for 4 hours
-            if current_time - last_trade_time >= 14400:
+            # Active surveillance: Send "Bot Active" every hour if no trades occurred for 4 hours (only during active session)
+            if in_trading_session() and (current_time - last_trade_time >= 14400):
                 if current_time - last_telegram_heartbeat > 3600:
                     telegram_notifier.send_message("ℹ️ *Vibe Trading Bot* : Actif et opérationnel. Aucune transaction détectée sur les 4 dernières heures.")
                     last_telegram_heartbeat = current_time
