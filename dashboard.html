@@ -2354,6 +2354,9 @@
                             ? '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">WIN ✓</span>'
                             : '<span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">LOSS ✗</span>';
 
+                    const isGold = trade.symbol.includes('XAU') || trade.symbol.includes('GOLD');
+                    const decimals = isGold ? 2 : 5;
+
                     const tr = document.createElement('tr');
                     tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors";
                     tr.innerHTML = `
@@ -2363,9 +2366,9 @@
                                 <span class="px-2 py-0.5 rounded text-xs font-bold ${typeColor}">${trade.type}</span>
                             </div>
                         </td>
-                        <td class="py-3 px-4 font-medium">${trade.entry.toFixed(5)}</td>
-                        <td class="py-3 px-4 text-emerald-400">${trade.tp ? trade.tp.toFixed(5) : '-'}</td>
-                        <td class="py-3 px-4 text-rose-400">${trade.sl ? trade.sl.toFixed(5) : '-'}</td>
+                        <td class="py-3 px-4 font-medium">${trade.entry.toFixed(decimals)}</td>
+                        <td class="py-3 px-4 text-emerald-400">${trade.tp ? trade.tp.toFixed(decimals) : '-'}</td>
+                        <td class="py-3 px-4 text-rose-400">${trade.sl ? trade.sl.toFixed(decimals) : '-'}</td>
                         <td class="py-3 px-4 font-bold ${profitColor}">$${trade.profit.toFixed(2)}</td>
                         <td class="py-3 px-4 text-right">${statusBadge}</td>
                     `;

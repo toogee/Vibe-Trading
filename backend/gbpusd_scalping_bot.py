@@ -436,6 +436,36 @@ def mt5_connect() -> bool:
     log.info(f"Connected to MT5 | Build {info.build} | Connected: {info.connected}")
     return True
 
+def resolve_broker_symbol(symbol: str) -> str:
+    """
+    Checks if the symbol is directly supported by the broker.
+    If not, tries common variations/wildcards to find the corresponding symbol on the MT5 terminal.
+    """
+    # 1. Check direct match
+    info = mt5.symbol_info(symbol)
+    if info is not None:
+        return symbol
+
+    # 2. Try common broker prefix/suffix patterns
+    search_patterns = []
+    if symbol == "XAUUSD":
+        search_patterns = ["*XAUUSD*", "*GOLD*", "*XAU*"]
+    elif symbol == "GBPUSD":
+        search_patterns = ["*GBPUSD*", "*GBP*USD*"]
+    else:
+        search_patterns = [f"*{symbol}*"]
+
+    for pattern in search_patterns:
+        symbols = mt5.symbols_get(pattern)
+        if symbols:
+            # Pick the first match
+            resolved_name = symbols[0].name
+            log.info(f"Dynamically resolved configured symbol '{symbol}' to broker symbol '{resolved_name}'")
+            return resolved_name
+
+    # Fallback to configured name
+    return symbol
+
 def get_bars(symbol: str, timeframe: int, count: int) -> Optional[pd.DataFrame]:
     rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
     if rates is None or len(rates) == 0:
@@ -1548,6 +1578,14 @@ def run():
         log.error("Failed to connect to MT5. Exiting.")
         telegram_notifier.send_message("❌ *ERREUR CRITIQUE :* Impossible de se connecter au terminal MetaTrader 5 !")
         return
+
+    # Dynamically resolve and map symbols to the actual broker symbol names
+    global SYMBOLS_CONFIG
+    resolved_config = {}
+    for symbol, config in list(SYMBOLS_CONFIG.items()):
+        resolved = resolve_broker_symbol(symbol)
+        resolved_config[resolved] = config
+    SYMBOLS_CONFIG = resolved_config
 
     # Ensure symbols are available
     for symbol, config in SYMBOLS_CONFIG.items():

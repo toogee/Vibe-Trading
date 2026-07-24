@@ -1,6 +1,7 @@
 import time
 import logging
 from datetime import datetime
+import MetaTrader5 as mt5
 from db import get_active_users, get_user_mt5_account, save_trade, update_mt5_status
 from security import decrypt_password
 from mt5_handler import MT5Handler
@@ -40,15 +41,26 @@ def run_trading_cycle():
                 
                 # 5. Execute Trade (London Session Logic - Simplified for Demo)
                 # In production, add exact time checks (6:00 AM - 12:00 PM GMT)
-                trade_result = handler.execute_trade(symbol="GBPUSD", action="BUY")
-                
-                if trade_result:
-                    # Add user ID to the trade payload
-                    trade_result['user_id'] = user_id
+                for symbol in ["GBPUSD", "XAUUSD"]:
+                    resolved_symbol = symbol
+                    # Check if standard name exists, otherwise check common variations
+                    if not mt5.symbol_info(symbol):
+                        if symbol == "XAUUSD" and mt5.symbol_info("GOLD"):
+                            resolved_symbol = "GOLD"
+                        elif symbol == "XAUUSD" and mt5.symbol_info("XAUUSDm"):
+                            resolved_symbol = "XAUUSDm"
+                        elif symbol == "GBPUSD" and mt5.symbol_info("GBPUSDm"):
+                            resolved_symbol = "GBPUSDm"
+
+                    trade_result = handler.execute_trade(symbol=resolved_symbol, action="BUY")
                     
-                    # 6. Save trade to database
-                    save_trade(trade_result)
-                    logging.info(f"Trade saved for user {user_id}")
+                    if trade_result:
+                        # Add user ID to the trade payload
+                        trade_result['user_id'] = user_id
+                        
+                        # 6. Save trade to database
+                        save_trade(trade_result)
+                        logging.info(f"Trade saved for user {user_id} on {resolved_symbol}")
                 
                 # 7. Disconnect Safely
                 handler.disconnect()
