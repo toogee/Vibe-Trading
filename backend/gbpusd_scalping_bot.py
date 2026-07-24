@@ -39,12 +39,30 @@ from security import decrypt_password
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-SYMBOL          = "GBPUSD"
-MAGIC_NUMBER    = 20240601          # Unique ID for this bot's trades
+# Symbols configuration
+SYMBOLS_CONFIG = {
+    "GBPUSD": {
+        "pip_value": 0.0001,
+        "max_spread_pips": 1.5,
+        "magic_number": 20240601,
+        "min_candle_body_pips": 0.8,
+        "zone_tolerance_pips": 5,
+        "news_currencies": ["GBP", "USD"]
+    },
+    "XAUUSD": {
+        "pip_value": 0.1,             # 1 pip = 0.10 USD (10 cents)
+        "max_spread_pips": 4.0,       # Max spread of 4.0 pips (40 cents)
+        "magic_number": 20240602,     # Magic number distinct
+        "min_candle_body_pips": 8.0,  # 8.0 pips (80 cents) min candle body to filter consolidation
+        "zone_tolerance_pips": 20,    # 2.0 USD zone tolerance
+        "news_currencies": ["USD"]    # Gold is heavily influenced by USD news
+    }
+}
+
 RISK_PERCENT    = 1.0               # Risk 1% of balance per trade
 ATR_SL_MULTIPLIER = 1.5             # SL is 1.5 * ATR
 RISK_REWARD_RATIO = 1.5             # TP is 1.5 * SL (risk/reward ratio)
-PIP_VALUE       = 0.0001            # 1 pip for GBPUSD (5-digit broker)
+
 # Daily lock profit / stop trading rules
 DAILY_PROFIT_TARGET_R   = 3.0       # Stop if daily profit >= 3R (e.g. +3R)
 DAILY_PROFIT_TARGET_PCT = None      # Stop if daily profit >= X% of balance
@@ -74,9 +92,6 @@ SESSION_START_HOUR = 6
 SESSION_END_HOUR   = 17
 TIMEZONE           = "Europe/London"
 
-# Spread filter
-MAX_SPREAD_PIPS    = 1.5
-
 # News filter: minutes before/after high-impact event to avoid trading
 NEWS_BUFFER_MINUTES = 30
 
@@ -86,11 +101,7 @@ ATR_PERIOD = 14
 # Swing detection lookback (bars each side)
 SWING_LOOKBACK = 5
 
-# Supply/Demand zone tolerance in pips
-ZONE_TOLERANCE_PIPS = 5
-
 # Consolidation / low-volatility filter
-MIN_CANDLE_BODY_PIPS = 0.8   # Minimum candle body to consider non-weak
 ADR_CONSOLIDATION_RATIO = 0.3  # If candle range < 30% of ADR → consolidating
 
 # Trend detection lookback in M1 bars
@@ -347,7 +358,7 @@ class SentimentFilter:
             return "No recent news headlines available."
         return "\n".join(headlines[:15])
 
-    def get_market_bias(self) -> float:
+    def get_market_bias(self, symbol: str) -> float:
         """
         Analyzes news headlines using Gemini and returns a sentiment score between -1 (Bearish) and +1 (Bullish).
         Returns 0.0 (Neutral) if disabled or if an error occurs.
@@ -360,8 +371,9 @@ class SentimentFilter:
             log.info("No fresh news headlines available. Sentiment score neutral (0.0)")
             return 0.0
 
+        asset_name = "GBP/USD currency pair" if "GBPUSD" in symbol else f"{symbol} asset (GOLD / Commodity)"
         prompt = f"""
-        Analyze the current market sentiment for the GBP/USD currency pair based on these recent news headlines:
+        Analyze the current market sentiment for the {asset_name} based on these recent news headlines:
         ---
         {headlines}
         ---
@@ -372,10 +384,10 @@ class SentimentFilter:
             response = self.model.generate_content(prompt)
             score_str = response.text.strip()
             score = float(score_str)
-            log.info(f"Gemini Sentiment Analysis: Score = {score:.2f} based on {len(headlines.splitlines())} headlines.")
+            log.info(f"Gemini Sentiment Analysis for {symbol}: Score = {score:.2f} based on {len(headlines.splitlines())} headlines.")
             return score
         except Exception as e:
-            log.warning(f"Failed to generate sentiment score from Gemini: {e}. Defaulting to neutral (0.0)")
+            log.warning(f"Failed to generate sentiment score from Gemini for {symbol}: {e}. Defaulting to neutral (0.0)")
             return 0.0
 
 gemini_key = os.getenv("GEMINI_API_KEY", "")
@@ -424,16 +436,16 @@ def mt5_connect() -> bool:
     log.info(f"Connected to MT5 | Build {info.build} | Connected: {info.connected}")
     return True
 
-def get_bars(timeframe: int, count: int) -> Optional[pd.DataFrame]:
-    rates = mt5.copy_rates_from_pos(SYMBOL, timeframe, 0, count)
+def get_bars(symbol: str, timeframe: int, count: int) -> Optional[pd.DataFrame]:
+    rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
     if rates is None or len(rates) == 0:
         return None
     df = pd.DataFrame(rates)
     df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
     return df
 
-def pip(n: float) -> float:
-    return n * PIP_VALUE
+def pip(n: float, pip_value: float) -> float:
+    return n * pip_value
 
 def candle_body(row) -> float:
     return abs(row["close"] - row["open"])
@@ -561,20 +573,20 @@ def detect_trend(df: pd.DataFrame) -> str:
 # CONSOLIDATION FILTER
 # ─────────────────────────────────────────────────────────────────────────────
 
-def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
+def is_consolidating(df: pd.DataFrame, pip_value: float, min_candle_body_pips: float, adr_consolidation_ratio: float, lookback: int = 10) -> bool:
     """
     Returns True if market is ranging / low-volatility on recent bars.
     Criteria:
-      1. Average candle body < MIN_CANDLE_BODY_PIPS
-      2. Average range < ADR_CONSOLIDATION_RATIO * 20-bar ADR
+      1. Average candle body < min_candle_body_pips
+      2. Average range < adr_consolidation_ratio * 20-bar ADR
     """
     recent = df.iloc[-lookback:]
     avg_body  = recent.apply(candle_body, axis=1).mean()
     avg_range = recent.apply(candle_range, axis=1).mean()
     adr       = df.iloc[-20:].apply(candle_range, axis=1).mean()
 
-    body_weak  = avg_body  < pip(MIN_CANDLE_BODY_PIPS)
-    range_low  = avg_range < (adr * ADR_CONSOLIDATION_RATIO)
+    body_weak  = avg_body  < pip(min_candle_body_pips, pip_value)
+    range_low  = avg_range < (adr * adr_consolidation_ratio)
 
     if body_weak or range_low:
         log.debug(f"Consolidation detected: avg_body={avg_body:.5f}, avg_range={avg_range:.5f}, adr={adr:.5f}")
@@ -585,7 +597,7 @@ def is_consolidating(df: pd.DataFrame, lookback: int = 10) -> bool:
 # SUPPLY & DEMAND ZONES
 # ─────────────────────────────────────────────────────────────────────────────
 
-def detect_zones(df: pd.DataFrame) -> Tuple[List[Tuple], List[Tuple]]:
+def detect_zones(df: pd.DataFrame, pip_value: float, zone_tolerance_pips: float) -> Tuple[List[Tuple], List[Tuple]]:
     """
     Detect supply and demand zones based on price action:
     - Demand zone: strong bullish move after a base (consolidation + breakout up)
@@ -595,7 +607,7 @@ def detect_zones(df: pd.DataFrame) -> Tuple[List[Tuple], List[Tuple]]:
     """
     demand_zones = []
     supply_zones = []
-    tol = pip(ZONE_TOLERANCE_PIPS)
+    tol = pip(zone_tolerance_pips, pip_value)
 
     for i in range(3, len(df) - 3):
         c = df.iloc[i]
@@ -607,18 +619,18 @@ def detect_zones(df: pd.DataFrame) -> Tuple[List[Tuple], List[Tuple]]:
         body_nxt  = candle_body(nxt)
 
         # Demand zone: small base candle followed by a strong bullish candle
-        if (body_c < pip(3) and                           # base candle small
+        if (body_c < pip(3, pip_value) and                           # base candle small
                 nxt["close"] > nxt["open"] and            # next is bullish
-                body_nxt > pip(4) and                     # strong move
+                body_nxt > pip(4, pip_value) and                     # strong move
                 nxt["close"] > c["high"]):                # breaks above base
             zone_low  = c["low"]  - tol
             zone_high = c["high"] + tol
             demand_zones.append((zone_low, zone_high))
 
         # Supply zone: small base candle followed by a strong bearish candle
-        if (body_c < pip(3) and
+        if (body_c < pip(3, pip_value) and
                 nxt["close"] < nxt["open"] and
-                body_nxt > pip(4) and
+                body_nxt > pip(4, pip_value) and
                 nxt["close"] < c["low"]):
             zone_low  = c["low"]  - tol
             zone_high = c["high"] + tol
@@ -635,21 +647,21 @@ def price_in_zone(price: float, zones: List[Tuple]) -> bool:
             return True
     return False
 
-def price_near_level(price: float, level: float, tolerance_pips: float = 3.0) -> bool:
-    return abs(price - level) <= pip(tolerance_pips)
+def price_near_level(price: float, level: float, tolerance_pips: float, pip_value: float) -> bool:
+    return abs(price - level) <= pip(tolerance_pips, pip_value)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PRICE ACTION — REJECTION & ENGULFING
 # ─────────────────────────────────────────────────────────────────────────────
 
-def is_rejection_candle(c, direction: str) -> bool:
+def is_rejection_candle(c, direction: str, pip_value: float) -> bool:
     """
     Bullish rejection: long lower wick, small body near top.
     Bearish rejection: long upper wick, small body near bottom.
     """
     body  = candle_body(c)
     rng   = candle_range(c)
-    if rng < pip(1):
+    if rng < pip(1, pip_value):
         return False
 
     if direction == "buy":
@@ -684,7 +696,7 @@ def is_engulfing(c_prev, c_curr, direction: str) -> bool:
 # BREAK & RETEST LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
-def detect_break_and_retest(df: pd.DataFrame, direction: str, zones, sma50: float, ema200: float) -> bool:
+def detect_break_and_retest(df: pd.DataFrame, direction: str, zones, sma50: float, ema200: float, pip_value: float) -> bool:
     """
     Check if price has broken a key level and is now retesting it.
     direction: 'buy' → breakout above level, retest from above
@@ -708,14 +720,14 @@ def detect_break_and_retest(df: pd.DataFrame, direction: str, zones, sma50: floa
             # c1 closes above level → break
             # c3 retraces back near level
             broke_above  = c1["close"] > level and c1["open"] < level
-            retesting    = price_near_level(c3["low"], level, 4)
+            retesting    = price_near_level(c3["low"], level, 4, pip_value)
             if broke_above and retesting:
                 return True
         else:
             # c1 closes below level → break
             # c3 retraces back near level
             broke_below  = c1["close"] < level and c1["open"] > level
-            retesting    = price_near_level(c3["high"], level, 4)
+            retesting    = price_near_level(c3["high"], level, 4, pip_value)
             if broke_below and retesting:
                 return True
     return False
@@ -724,17 +736,17 @@ def detect_break_and_retest(df: pd.DataFrame, direction: str, zones, sma50: floa
 # M1 MOMENTUM CONFIRMATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-def m1_momentum_aligned(direction: str) -> bool:
+def m1_momentum_aligned(symbol: str, direction: str, config: dict) -> bool:
     """
     Check last 3 M1 candles for momentum alignment.
     Buy: majority of last 3 closed bullish, no consolidation.
     Sell: majority of last 3 closed bearish, no consolidation.
     """
-    df_m1 = get_bars(mt5.TIMEFRAME_M1, 20)
+    df_m1 = get_bars(symbol, mt5.TIMEFRAME_M1, 20)
     if df_m1 is None or len(df_m1) < 10:
         return False
 
-    if is_consolidating(df_m1, lookback=6):
+    if is_consolidating(df_m1, config["pip_value"], config["min_candle_body_pips"], ADR_CONSOLIDATION_RATIO, lookback=6):
         log.debug("M1 consolidating — momentum not aligned.")
         return False
 
@@ -761,7 +773,7 @@ def in_trading_session() -> bool:
 # TRADE EXECUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-def calculate_lot_size(balance: float, risk_percent: float, sl_pips: float, sym_info) -> float:
+def calculate_lot_size(balance: float, risk_percent: float, sl_pips: float, sym_info, pip_value: float) -> float:
     """
     Calculate position size based on account balance and risk percentage.
     """
@@ -776,7 +788,7 @@ def calculate_lot_size(balance: float, risk_percent: float, sl_pips: float, sym_
     if tick_value == 0 or tick_size == 0:
         return sym_info.volume_min
 
-    ticks_per_pip = PIP_VALUE / tick_size
+    ticks_per_pip = pip_value / tick_size
     loss_value_per_lot = sl_pips * ticks_per_pip * tick_value
     
     if loss_value_per_lot == 0:
@@ -794,16 +806,16 @@ def calculate_lot_size(balance: float, risk_percent: float, sl_pips: float, sym_
     
     return float(round(lot, 2))
 
-def get_open_position(magic: int) -> Optional[object]:
-    """Return open position for GBPUSD placed by this bot, or None."""
-    positions = mt5.positions_get(symbol=SYMBOL)
+def get_open_position(symbol: str, magic: int) -> Optional[object]:
+    """Return open position for the symbol placed by this bot, or None."""
+    positions = mt5.positions_get(symbol=symbol)
     if positions:
         for pos in positions:
             if pos.magic == magic:
                 return pos
     return None
 
-def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> bool:
+def place_order_for_all_users(symbol: str, direction: str, atr: float, trigger_type: str, config: dict) -> bool:
     """
     Loop through all active users in Supabase, switch MT5 account, and place order.
     Returns True if at least one trade was placed.
@@ -816,10 +828,14 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
     success_count = 0
     original_account = mt5.account_info()
 
+    pip_value = config["pip_value"]
+    magic_number = config["magic_number"]
+    max_spread = config["max_spread_pips"]
+
     # Calculate standard SL/TP distances based on ATR
     sl_distance = atr * ATR_SL_MULTIPLIER
     tp_distance = sl_distance * RISK_REWARD_RATIO
-    sl_pips = sl_distance / PIP_VALUE
+    sl_pips = sl_distance / pip_value
 
     # Format comment for MT5 (max 31 chars)
     comment_str = "Vibe_Bot"
@@ -847,18 +863,18 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
             
             update_mt5_status(mt5_acc['id'], 'CONNECTED')
 
-            tick = mt5.symbol_info_tick(SYMBOL)
+            tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 continue
 
-            sym_info = mt5.symbol_info(SYMBOL)
+            sym_info = mt5.symbol_info(symbol)
             point = sym_info.point
-            pips_to_pts = int(round(PIP_VALUE / point))
+            pips_to_pts = int(round(pip_value / point))
             
             # Spread Check
-            spread_pips = (tick.ask - tick.bid) / PIP_VALUE
-            if spread_pips > MAX_SPREAD_PIPS:
-                log.warning(f"Spread {spread_pips:.1f} pips exceeds limit {MAX_SPREAD_PIPS}. Skipping trade for {login}.")
+            spread_pips = (tick.ask - tick.bid) / pip_value
+            if spread_pips > max_spread:
+                log.warning(f"Spread {spread_pips:.1f} pips exceeds limit {max_spread}. Skipping trade for {login}.")
                 continue
             
             # Calculate dynamic lot size based on balance and ATR Stop-Loss
@@ -881,7 +897,7 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
                 order_type = mt5.ORDER_TYPE_SELL
 
             # ── Vérifier stop level minimum du broker ───────────────────────
-            sym_info_check = mt5.symbol_info(SYMBOL)
+            sym_info_check = mt5.symbol_info(symbol)
             current_sl_pips = sl_pips
             current_sl_distance = sl_distance
             current_tp_distance = tp_distance
@@ -891,7 +907,7 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
                 if current_sl_pips < min_stop_pips:
                     log.warning(f"⚠️  SL {current_sl_pips:.1f}p < stop_level min {min_stop_pips}p — SL ajusté!")
                     current_sl_pips = min_stop_pips + 2
-                    current_sl_distance = current_sl_pips * PIP_VALUE
+                    current_sl_distance = current_sl_pips * pip_value
                     current_tp_distance = current_sl_distance * RISK_REWARD_RATIO
                     if direction == "buy":
                          sl = price - current_sl_distance
@@ -900,7 +916,7 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
                          sl = price + current_sl_distance
                          tp = price - current_tp_distance
 
-            dynamic_lot = calculate_lot_size(balance, RISK_PERCENT, current_sl_pips, sym_info)
+            dynamic_lot = calculate_lot_size(balance, RISK_PERCENT, current_sl_pips, sym_info, pip_value)
 
             # Auto-détecter le filling mode supporté par le broker
             filling_mode = mt5.ORDER_FILLING_IOC  # défaut
@@ -913,14 +929,14 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
 
             request = {
                 "action":    mt5.TRADE_ACTION_DEAL,
-                "symbol":    SYMBOL,
+                "symbol":    symbol,
                 "volume":    dynamic_lot,
                 "type":      order_type,
                 "price":     price,
                 "sl":        round(sl, 5),
                 "tp":        round(tp, 5),
                 "deviation": 10,
-                "magic":     MAGIC_NUMBER,
+                "magic":     magic_number,
                 "comment":   comment_str,
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": filling_mode,
@@ -931,12 +947,12 @@ def place_order_for_all_users(direction: str, atr: float, trigger_type: str) -> 
                 log.error(f"Order failed for user {login}: {result}")
                 continue
 
-            log.info(f"✅ ORDER PLACED for {login} | {direction.upper()} {SYMBOL} @ {price:.5f} | Lot={dynamic_lot} | SL={sl:.5f} | TP={tp:.5f}")
+            log.info(f"✅ ORDER PLACED for {login} | {direction.upper()} {symbol} @ {price:.5f} | Lot={dynamic_lot} | SL={sl:.5f} | TP={tp:.5f}")
             
             # Save trade to Supabase
             save_trade({
                 "user_id":   user_id,
-                "symbol":    SYMBOL,
+                "symbol":    symbol,
                 "type":      direction.upper(),
                 "entry":     round(price, 5),
                 "sl":        round(sl, 5),
@@ -974,198 +990,200 @@ def check_closed_trades():
     """
     try:
         from db import supabase
-        # 1. Fetch all open trades from Supabase
-        resp = supabase.table("trades").select("*").eq("status", "OPEN").eq("symbol", SYMBOL).execute()
-        open_trades = resp.data if resp and resp.data else []
-        if not open_trades:
-            return
-
-        telegram_sent = False
-
-        for trade in open_trades:
-            user_id = trade["user_id"]
-            trade_id = trade["id"]
-            open_time_str = trade["open_time"]
-
-            # Fetch MT5 account for this user
-            mt5_acc = get_user_mt5_account(user_id)
-            if not mt5_acc:
+        for symbol, config in SYMBOLS_CONFIG.items():
+            # Fetch all open trades for this symbol from Supabase
+            resp = supabase.table("trades").select("*").eq("status", "OPEN").eq("symbol", symbol).execute()
+            open_trades = resp.data if resp and resp.data else []
+            if not open_trades:
                 continue
 
-            try:
-                plain_password = decrypt_password(mt5_acc['encrypted_password'])
-                login = int(mt5_acc['login_id'])
-                server = mt5_acc['server_name']
+            magic_number = config["magic_number"]
+            pip_value = config["pip_value"]
 
-                # Log in to user's account
-                if not mt5.login(login=login, password=plain_password, server=server):
-                    log.error(f"check_closed_trades: Failed to login to user {login}")
-                    update_mt5_status(mt5_acc['id'], 'ERROR')
+            for trade in open_trades:
+                user_id = trade["user_id"]
+                trade_id = trade["id"]
+                open_time_str = trade["open_time"]
+
+                # Fetch MT5 account for this user
+                mt5_acc = get_user_mt5_account(user_id)
+                if not mt5_acc:
                     continue
 
-                update_mt5_status(mt5_acc['id'], 'CONNECTED')
+                try:
+                    plain_password = decrypt_password(mt5_acc['encrypted_password'])
+                    login = int(mt5_acc['login_id'])
+                    server = mt5_acc['server_name']
 
-                # Check if position is still open in MT5
-                open_pos = get_open_position(MAGIC_NUMBER)
-                if open_pos is not None:
-                    # Trade is still open, do nothing
-                    continue
+                    # Log in to user's account
+                    if not mt5.login(login=login, password=plain_password, server=server):
+                        log.error(f"check_closed_trades: Failed to login to user {login} for {symbol}")
+                        update_mt5_status(mt5_acc['id'], 'ERROR')
+                        continue
 
-                # Parse open time from Supabase
-                trade_open_time = datetime.fromisoformat(open_time_str.replace("Z", "+00:00"))
+                    update_mt5_status(mt5_acc['id'], 'CONNECTED')
 
-                # Determine broker timezone offset dynamically
-                offset_seconds = 0
-                tick = mt5.symbol_info_tick(SYMBOL)
-                if tick:
-                    utc_now = datetime.now(pytz.utc).timestamp()
-                    offset_seconds = round((tick.time - utc_now) / 1800) * 1800
+                    # Check if position is still open in MT5
+                    open_pos = get_open_position(symbol, magic_number)
+                    if open_pos is not None:
+                        # Trade is still open, do nothing
+                        continue
 
-                # Query deals in a wide window around trade open time
-                from_date_utc = trade_open_time - timedelta(days=2)
-                to_date_utc = datetime.now(pytz.utc) + timedelta(days=2)
+                    # Parse open time from Supabase
+                    trade_open_time = datetime.fromisoformat(open_time_str.replace("Z", "+00:00"))
 
-                from_date_server = datetime.fromtimestamp(from_date_utc.timestamp() + offset_seconds)
-                to_date_server = datetime.fromtimestamp(to_date_utc.timestamp() + offset_seconds)
+                    # Determine broker timezone offset dynamically
+                    offset_seconds = 0
+                    tick = mt5.symbol_info_tick(symbol)
+                    if tick:
+                        utc_now = datetime.now(pytz.utc).timestamp()
+                        offset_seconds = round((tick.time - utc_now) / 1800) * 1800
 
-                deals = mt5.history_deals_get(from_date_server, to_date_server)
-                profit        = 0.0
-                found_deal    = False
-                deal_time_str = datetime.now(pytz.utc).isoformat()
-                close_reason  = None
+                    # Query deals in a wide window around trade open time
+                    from_date_utc = trade_open_time - timedelta(days=2)
+                    to_date_utc = datetime.now(pytz.utc) + timedelta(days=2)
 
-                if deals:
-                    # Filter exit deals matching our magic number and closed after trade_open_time
-                    candidate_deals = []
-                    for deal in deals:
-                        if deal.magic != MAGIC_NUMBER:
-                            continue
-                        # Log every bot deal for diagnostics
-                        log.info(
-                            f"  Deal: ticket={deal.ticket} | entry={deal.entry} | "
-                            f"reason={deal.reason} | profit={deal.profit:.2f} | "
-                            f"type={deal.type}"
-                        )
-                        if deal.entry == mt5.DEAL_ENTRY_IN:
-                            continue
-                        
-                        # Convert deal time (server time) to UTC
-                        deal_utc_timestamp = deal.time - offset_seconds
-                        deal_time_utc = datetime.fromtimestamp(deal_utc_timestamp, pytz.utc)
-                        
-                        if deal_time_utc > trade_open_time:
-                            candidate_deals.append((deal, deal_time_utc))
+                    from_date_server = datetime.fromtimestamp(from_date_utc.timestamp() + offset_seconds)
+                    to_date_server = datetime.fromtimestamp(to_date_utc.timestamp() + offset_seconds)
 
-                    log.info(f"MT5 deals trouvés pour ce bot après open_time: {len(candidate_deals)}")
+                    deals = mt5.history_deals_get(from_date_server, to_date_server)
+                    profit        = 0.0
+                    found_deal    = False
+                    deal_time_str = datetime.now(pytz.utc).isoformat()
+                    close_reason  = None
 
-                    if candidate_deals:
-                        # Sort by time ascending to get the oldest exit deal since open_time
-                        candidate_deals.sort(key=lambda x: x[1])
-                        deal, deal_time_utc = candidate_deals[0]
-
-                        profit        = deal.profit
-                        deal_time_str = deal_time_utc.isoformat()
-                        found_deal    = True
-
-                        # Déterminer raison via deal.reason (le plus fiable)
-                        if deal.reason == mt5.DEAL_REASON_TP:
-                            close_reason = "TP"
-                        elif deal.reason == mt5.DEAL_REASON_SL:
-                            close_reason = "SL"
-                        elif deal.profit < 0:
-                            close_reason = "SL"
-                            log.info(f"Raison inconnue mais profit négatif → forcé SL")
-                        elif deal.profit > 0:
-                            close_reason = "TP"
-                            log.info(f"Raison inconnue mais profit positif → forcé TP")
-                        else:
-                            close_reason = "MANUAL"
-
-                if not found_deal:
-                    log.warning(f"Aucun deal de fermeture trouvé pour trade {trade_id}. Vérifier MT5 history. Skipping update.")
-                    continue
-
-                # ── Statut final ──────────────────────────────────────────────
-                if close_reason == "TP":
-                    status = "WIN"
-                elif close_reason == "SL":
-                    status = "LOSS"
-                else:
-                    # Dernier recours absolu : profit
-                    status = "WIN" if profit > 0 else "LOSS"
-
-                log.info(
-                    f"✅ TRADE FERMÉ | ID={trade_id} | Raison={close_reason} | "
-                    f"Profit=${profit:.2f} | Statut={status}"
-                )
-
-                # ── Mise à jour Supabase ──────────────────────────────────────
-                supabase.table("trades").update({
-                    "status":     status,
-                    "profit":     round(profit, 2),
-                    "close_time": deal_time_str
-                }).eq("id", trade_id).execute()
-
-                log.info(f"Supabase updated: trade {trade_id} → {status} ${profit:.2f}")
-
-                # ── Daily limits & Notification (Géré par le compte Master) ────
-                master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
-                is_master = (not master_login) or (str(login) == master_login)
-
-                if is_master:
-                    signal_key = open_time_str[:16]  # Group by minute to identify the signal batch
-                    if signal_key not in daily.processed_signals:
-                        # Update Daily limits
-                        was_halted = daily.halted
-                        acc_info = mt5.account_info()
-                        master_balance = acc_info.balance if acc_info is not None else 0.0
-                        daily.record_trade_result(profit, master_balance)
-                        daily.processed_signals.add(signal_key)
-                        if daily.halted and not was_halted:
-                            telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
-
-                        # ── Notification Telegram ──────────
-                        if status == "WIN":
-                            emoji       = "🎯"
-                            status_text = "Take Profit atteint ✅"
-                        else:
-                            emoji       = "❌"
-                            status_text = "Stop Loss atteint 🛑"
-                        reason_label = f" ({close_reason})" if close_reason else ""
-                        
-                        # Extract strategy from entry deal comment
-                        strategy_label = "Inconnue"
-                        
-                        # Find the entry deal of this position to read the original comment
-                        entry_deal = None
-                        if found_deal and deals:
-                            for d in deals:
-                                if getattr(d, "position_id", None) == getattr(deal, "position_id", None) and getattr(d, "entry", None) == mt5.DEAL_ENTRY_IN:
-                                    entry_deal = d
-                                    break
-                        
-                        cmt = None
-                        if entry_deal and getattr(entry_deal, "comment", None):
-                            cmt = entry_deal.comment
-                        elif found_deal and getattr(deal, "comment", None):
-                            cmt = deal.comment
+                    if deals:
+                        # Filter exit deals matching our magic number and closed after trade_open_time
+                        candidate_deals = []
+                        for deal in deals:
+                            if deal.magic != magic_number:
+                                continue
+                            # Log every bot deal for diagnostics
+                            log.info(
+                                f"  Deal: ticket={deal.ticket} | entry={deal.entry} | "
+                                f"reason={deal.reason} | profit={deal.profit:.2f} | "
+                                f"type={deal.type}"
+                            )
+                            if deal.entry == mt5.DEAL_ENTRY_IN:
+                                continue
                             
-                        if cmt:
-                            if "Vibe_DIRECT" in cmt:
-                                strategy_label = "DIRECT TRIGGER"
-                            elif "Vibe_SCORE" in cmt:
-                                score_val = cmt.replace("Vibe_SCORE_", "")
-                                strategy_label = f"SCORE SYSTEM ({score_val}/10)"
+                            # Convert deal time (server time) to UTC
+                            deal_utc_timestamp = deal.time - offset_seconds
+                            deal_time_utc = datetime.fromtimestamp(deal_utc_timestamp, pytz.utc)
+                            
+                            if deal_time_utc > trade_open_time:
+                                candidate_deals.append((deal, deal_time_utc))
+
+                        log.info(f"MT5 deals trouvés pour ce bot sur {symbol} après open_time: {len(candidate_deals)}")
+
+                        if candidate_deals:
+                            # Sort by time ascending to get the oldest exit deal since open_time
+                            candidate_deals.sort(key=lambda x: x[1])
+                            deal, deal_time_utc = candidate_deals[0]
+
+                            profit        = deal.profit
+                            deal_time_str = deal_time_utc.isoformat()
+                            found_deal    = True
+
+                            # Déterminer raison via deal.reason (le plus fiable)
+                            if deal.reason == mt5.DEAL_REASON_TP:
+                                close_reason = "TP"
+                            elif deal.reason == mt5.DEAL_REASON_SL:
+                                close_reason = "SL"
+                            elif deal.profit < 0:
+                                close_reason = "SL"
+                                log.info(f"Raison inconnue mais profit négatif sur {symbol} → forcé SL")
+                            elif deal.profit > 0:
+                                close_reason = "TP"
+                                log.info(f"Raison inconnue mais profit positif sur {symbol} → forcé TP")
                             else:
-                                strategy_label = cmt
+                                close_reason = "MANUAL"
 
-                        telegram_notifier.send_message(
-                            f"{emoji} *{status_text} sur GBP/USD !*{reason_label}\n"
-                            f"Stratégie: `{strategy_label}`"
-                        )
+                    if not found_deal:
+                        log.warning(f"Aucun deal de fermeture trouvé pour trade {trade_id} ({symbol}). Vérifier MT5 history. Skipping update.")
+                        continue
 
-            except Exception as e:
-                log.error(f"Error checking trade closure for user {user_id}: {e}")
+                    # ── Statut final ──────────────────────────────────────────────
+                    if close_reason == "TP":
+                        status = "WIN"
+                    elif close_reason == "SL":
+                        status = "LOSS"
+                    else:
+                        # Dernier recours absolu : profit
+                        status = "WIN" if profit > 0 else "LOSS"
+
+                    log.info(
+                        f"✅ TRADE FERMÉ | ID={trade_id} ({symbol}) | Raison={close_reason} | "
+                        f"Profit=${profit:.2f} | Statut={status}"
+                    )
+
+                    # ── Mise à jour Supabase ──────────────────────────────────────
+                    supabase.table("trades").update({
+                        "status":     status,
+                        "profit":     round(profit, 2),
+                        "close_time": deal_time_str
+                    }).eq("id", trade_id).execute()
+
+                    log.info(f"Supabase updated: trade {trade_id} ({symbol}) → {status} ${profit:.2f}")
+
+                    # ── Daily limits & Notification (Géré par le compte Master) ────
+                    master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
+                    is_master = (not master_login) or (str(login) == master_login)
+
+                    if is_master:
+                        signal_key = open_time_str[:16]  # Group by minute to identify the signal batch
+                        if signal_key not in daily.processed_signals:
+                            # Update Daily limits
+                            was_halted = daily.halted
+                            acc_info = mt5.account_info()
+                            master_balance = acc_info.balance if acc_info is not None else 0.0
+                            daily.record_trade_result(profit, master_balance)
+                            daily.processed_signals.add(signal_key)
+                            if daily.halted and not was_halted:
+                                telegram_notifier.send_message(f"🛑 *Trading terminé pour aujourd'hui !*\nRaison: {daily.halt_reason}")
+
+                            # ── Notification Telegram ──────────
+                            if status == "WIN":
+                                emoji       = "🎯"
+                                status_text = "Take Profit atteint ✅"
+                            else:
+                                emoji       = "❌"
+                                status_text = "Stop Loss atteint 🛑"
+                            reason_label = f" ({close_reason})" if close_reason else ""
+                            
+                            # Extract strategy from entry deal comment
+                            strategy_label = "Inconnue"
+                            
+                            # Find the entry deal of this position to read the original comment
+                            entry_deal = None
+                            if found_deal and deals:
+                                for d in deals:
+                                    if getattr(d, "position_id", None) == getattr(deal, "position_id", None) and getattr(d, "entry", None) == mt5.DEAL_ENTRY_IN:
+                                        entry_deal = d
+                                        break
+                            
+                            cmt = None
+                            if entry_deal and getattr(entry_deal, "comment", None):
+                                cmt = entry_deal.comment
+                            elif found_deal and getattr(deal, "comment", None):
+                                cmt = deal.comment
+                                
+                            if cmt:
+                                if "Vibe_DIRECT" in cmt:
+                                    strategy_label = "DIRECT TRIGGER"
+                                elif "Vibe_SCORE" in cmt:
+                                    score_val = cmt.replace("Vibe_SCORE_", "")
+                                    strategy_label = f"SCORE SYSTEM ({score_val}/10)"
+                                else:
+                                    strategy_label = cmt
+
+                            telegram_notifier.send_message(
+                                f"{emoji} *{status_text} sur {symbol} !*{reason_label}\n"
+                                f"Stratégie: `{strategy_label}`"
+                            )
+
+                except Exception as e:
+                    log.error(f"Error checking trade closure for user {user_id} on {symbol}: {e}")
 
     except Exception as e:
         log.error(f"Error in check_closed_trades: {e}")
@@ -1248,97 +1266,101 @@ def manage_open_trades():
             if not mt5.login(login=login, password=plain_password, server=server):
                 continue
             
-            positions = mt5.positions_get(symbol=SYMBOL)
-            if not positions: continue
-            
-            for pos in positions:
-                if pos.magic != MAGIC_NUMBER:
-                    continue
+            for symbol, config in SYMBOLS_CONFIG.items():
+                positions = mt5.positions_get(symbol=symbol)
+                if not positions: continue
                 
-                # Calculate TP distance
-                tp_pips = 0.0
-                if pos.tp > 0:
-                    tp_pips = abs(pos.price_open - pos.tp) / PIP_VALUE
-                else:
-                    # Fallback using SL and Risk-Reward ratio
-                    sl_dist = abs(pos.price_open - pos.sl) / PIP_VALUE if pos.sl > 0 else 0.0
-                    tp_pips = sl_dist * RISK_REWARD_RATIO if sl_dist > 0 else 0.0
+                magic_number = config["magic_number"]
+                pip_value = config["pip_value"]
 
-                if tp_pips <= 0:
-                    continue
-
-                # Calculate profit in pips
-                if pos.type == mt5.ORDER_TYPE_BUY:
-                    profit_pips = (pos.price_current - pos.price_open) / PIP_VALUE
-                else:
-                    profit_pips = (pos.price_open - pos.price_current) / PIP_VALUE
-
-                profit_ratio = profit_pips / tp_pips
-                lock_ratio = get_progressive_trail_lock_ratio(profit_ratio)
-
-                if lock_ratio is not None:
-                    # Target SL
-                    if pos.type == mt5.ORDER_TYPE_BUY:
-                        target_sl = pos.price_open + (lock_ratio * tp_pips * PIP_VALUE)
-                    else:
-                        target_sl = pos.price_open - (lock_ratio * tp_pips * PIP_VALUE)
-
-                    # Check if target SL is better than current SL and respects stop level limits
-                    sym_info = mt5.symbol_info(SYMBOL)
-                    min_stop_pips = (sym_info.trade_stops_level / 10.0) if (sym_info and sym_info.trade_stops_level > 0) else 0.0
-                    min_distance = min_stop_pips * PIP_VALUE
-
-                    should_update = False
-                    if pos.type == mt5.ORDER_TYPE_BUY:
-                        # For BUY, target SL must be higher than current SL and not too close to current price
-                        is_better = target_sl > pos.sl
-                        not_too_close = (pos.price_current - target_sl) >= min_distance
-                        if is_better and not_too_close:
-                            should_update = True
-                    else:
-                        # For SELL, target SL must be lower than current SL (or current SL is 0.0) and not too close to current price
-                        is_better = target_sl < pos.sl or pos.sl == 0.0
-                        not_too_close = (target_sl - pos.price_current) >= min_distance
-                        if is_better and not_too_close:
-                            should_update = True
-
-                    if should_update:
-                        request = {
-                            "action": mt5.TRADE_ACTION_SLTP,
-                            "position": pos.ticket,
-                            "symbol": SYMBOL,
-                            "sl": round(target_sl, 5),
-                            "tp": pos.tp
-                        }
-                        res = mt5.order_send(request)
-                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            log.info(f"Trailing SL progressive applied for user {login} {'BUY' if pos.type == mt5.ORDER_TYPE_BUY else 'SELL'} {pos.ticket} (SL: {target_sl:.5f}, Profit: {profit_pips:.1f}p, Ratio: {profit_ratio:.2%})")
-                
-                # Near TP Close Logic
-                if pos.tp > 0:
-                    dist_to_tp = 0.0
-                    if pos.type == mt5.ORDER_TYPE_BUY:
-                        dist_to_tp = (pos.tp - pos.price_current) / PIP_VALUE
-                    elif pos.type == mt5.ORDER_TYPE_SELL:
-                        dist_to_tp = (pos.price_current - pos.tp) / PIP_VALUE
-                        
-                    timer_key = f"{login}_{pos.ticket}"
+                for pos in positions:
+                    if pos.magic != magic_number:
+                        continue
                     
-                    if 0 < dist_to_tp <= 2.0:
-                        if timer_key not in near_tp_timers:
-                            near_tp_timers[timer_key] = time.time()
-                            log.info(f"Near TP zone entered for {login} ticket {pos.ticket}. Dist: {dist_to_tp:.1f} pips")
-                        else:
-                            elapsed = time.time() - near_tp_timers[timer_key]
-                            if elapsed >= 120:  # 2 minutes
-                                if close_trade_now(login, pos):
-                                    master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
-                                    if not master_login or str(login) == master_login:
-                                        telegram_notifier.send_message(f"⚠️ *Near TP Close* sur GBP/USD !\nLa position a été fermée automatiquement car elle stagnait à {dist_to_tp:.1f} pips du TP pendant 2 minutes.")
-                                    del near_tp_timers[timer_key]
+                    # Calculate TP distance
+                    tp_pips = 0.0
+                    if pos.tp > 0:
+                        tp_pips = abs(pos.price_open - pos.tp) / pip_value
                     else:
-                        if timer_key in near_tp_timers:
-                            del near_tp_timers[timer_key]
+                        # Fallback using SL and Risk-Reward ratio
+                        sl_dist = abs(pos.price_open - pos.sl) / pip_value if pos.sl > 0 else 0.0
+                        tp_pips = sl_dist * RISK_REWARD_RATIO if sl_dist > 0 else 0.0
+
+                    if tp_pips <= 0:
+                        continue
+
+                    # Calculate profit in pips
+                    if pos.type == mt5.ORDER_TYPE_BUY:
+                        profit_pips = (pos.price_current - pos.price_open) / pip_value
+                    else:
+                        profit_pips = (pos.price_open - pos.price_current) / pip_value
+
+                    profit_ratio = profit_pips / tp_pips
+                    lock_ratio = get_progressive_trail_lock_ratio(profit_ratio)
+
+                    if lock_ratio is not None:
+                        # Target SL
+                        if pos.type == mt5.ORDER_TYPE_BUY:
+                            target_sl = pos.price_open + (lock_ratio * tp_pips * pip_value)
+                        else:
+                            target_sl = pos.price_open - (lock_ratio * tp_pips * pip_value)
+
+                        # Check if target SL is better than current SL and respects stop level limits
+                        sym_info = mt5.symbol_info(symbol)
+                        min_stop_pips = (sym_info.trade_stops_level / 10.0) if (sym_info and sym_info.trade_stops_level > 0) else 0.0
+                        min_distance = min_stop_pips * pip_value
+
+                        should_update = False
+                        if pos.type == mt5.ORDER_TYPE_BUY:
+                            # For BUY, target SL must be higher than current SL and not too close to current price
+                            is_better = target_sl > pos.sl
+                            not_too_close = (pos.price_current - target_sl) >= min_distance
+                            if is_better and not_too_close:
+                                should_update = True
+                        else:
+                            # For SELL, target SL must be lower than current SL (or current SL is 0.0) and not too close to current price
+                            is_better = target_sl < pos.sl or pos.sl == 0.0
+                            not_too_close = (target_sl - pos.price_current) >= min_distance
+                            if is_better and not_too_close:
+                                should_update = True
+
+                        if should_update:
+                            request = {
+                                "action": mt5.TRADE_ACTION_SLTP,
+                                "position": pos.ticket,
+                                "symbol": symbol,
+                                "sl": round(target_sl, 5),
+                                "tp": pos.tp
+                            }
+                            res = mt5.order_send(request)
+                            if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                                log.info(f"Trailing SL progressive applied for user {login} {'BUY' if pos.type == mt5.ORDER_TYPE_BUY else 'SELL'} {pos.ticket} (SL: {target_sl:.5f}, Profit: {profit_pips:.1f}p, Ratio: {profit_ratio:.2%})")
+                    
+                    # Near TP Close Logic
+                    if pos.tp > 0:
+                        dist_to_tp = 0.0
+                        if pos.type == mt5.ORDER_TYPE_BUY:
+                            dist_to_tp = (pos.tp - pos.price_current) / pip_value
+                        elif pos.type == mt5.ORDER_TYPE_SELL:
+                            dist_to_tp = (pos.price_current - pos.tp) / pip_value
+                            
+                        timer_key = f"{login}_{pos.ticket}"
+                        
+                        if 0 < dist_to_tp <= 2.0:
+                            if timer_key not in near_tp_timers:
+                                near_tp_timers[timer_key] = time.time()
+                                log.info(f"Near TP zone entered for {login} ticket {pos.ticket} ({symbol}). Dist: {dist_to_tp:.1f} pips")
+                            else:
+                                elapsed = time.time() - near_tp_timers[timer_key]
+                                if elapsed >= 120:  # 2 minutes
+                                    if close_trade_now(login, pos):
+                                        master_login = os.getenv("MASTER_ACCOUNT_LOGIN", "").strip()
+                                        if not master_login or str(login) == master_login:
+                                            telegram_notifier.send_message(f"⚠️ *Near TP Close* sur {symbol} !\nLa position a été fermée automatiquement car elle stagnait à {dist_to_tp:.1f} pips du TP pendant 2 minutes.")
+                                        del near_tp_timers[timer_key]
+                        else:
+                            if timer_key in near_tp_timers:
+                                del near_tp_timers[timer_key]
 
         except Exception as e:
             log.error(f"Error managing trades for user {user_id}: {e}")
@@ -1379,7 +1401,7 @@ def sync_all_balances():
 # CORE SIGNAL LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
-def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
+def evaluate_signal(symbol: str, config: dict) -> Tuple[Optional[str], float, Optional[str]]:
     """
     Full signal evaluation pipeline combining scoring system (6.5/10)
     and direct trigger logic:
@@ -1391,9 +1413,9 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     Returns: (direction, atr_value, trigger_type) -> ('buy'/'sell'/None, float, str/None)
     """
     # ── 1. Fetch M1 data ────────────────────────────────────────────────────
-    df_m1_raw = get_bars(mt5.TIMEFRAME_M1, 300)
+    df_m1_raw = get_bars(symbol, mt5.TIMEFRAME_M1, 300)
     if df_m1_raw is None or len(df_m1_raw) < 150:
-        log.debug("Not enough M1 data.")
+        log.debug(f"Not enough M1 data for {symbol}.")
         return None, 0.0, None
 
     df_m1 = add_indicators(df_m1_raw)
@@ -1404,8 +1426,8 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
         return None, 0.0, None
 
     # ── 2. Consolidation ─────────────────────────────────────────────────────
-    if is_consolidating(df, lookback=10):
-        log.info("M1 consolidating — skipping.")
+    if is_consolidating(df, config["pip_value"], config["min_candle_body_pips"], ADR_CONSOLIDATION_RATIO, lookback=10):
+        log.info(f"M1 consolidating for {symbol} — skipping.")
         return None, 0.0, None
 
     # ── 3. Indicators at last closed bar ─────────────────────────────────────
@@ -1422,7 +1444,7 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     prev_d = prev_closed["stoch_d"]
 
     # Supply / Demand zones
-    demand_zones, supply_zones = detect_zones(df.iloc[:-1])  # exclude current bar
+    demand_zones, supply_zones = detect_zones(df.iloc[:-1], config["pip_value"], config["zone_tolerance_pips"])  # exclude current bar
 
     # ── 4. Calculate 10-Point Score ──────────────────────────────────────────
     buy_score = 0.0
@@ -1439,13 +1461,13 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     if price < sma50: sell_score += 1.0
 
     # 4.2 M1 Momentum
-    if m1_momentum_aligned("buy"): buy_score += 1.0
-    if m1_momentum_aligned("sell"): sell_score += 1.0
+    if m1_momentum_aligned(symbol, "buy", config): buy_score += 1.0
+    if m1_momentum_aligned(symbol, "sell", config): sell_score += 1.0
 
     # 4.3 Price Action
-    if is_engulfing(prev_closed, last_closed, "buy") or is_rejection_candle(last_closed, "buy"):
+    if is_engulfing(prev_closed, last_closed, "buy") or is_rejection_candle(last_closed, "buy", config["pip_value"]):
         buy_score += 1.0
-    if is_engulfing(prev_closed, last_closed, "sell") or is_rejection_candle(last_closed, "sell"):
+    if is_engulfing(prev_closed, last_closed, "sell") or is_rejection_candle(last_closed, "sell", config["pip_value"]):
         sell_score += 1.0
 
     # 4.4 Supply/Demand
@@ -1455,9 +1477,9 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     if in_supply: sell_score += 1.5
 
     # 4.5 Break & Retest
-    if detect_break_and_retest(df.iloc[:-1], "buy", demand_zones, sma50, ema200):
+    if detect_break_and_retest(df.iloc[:-1], "buy", demand_zones, sma50, ema200, config["pip_value"]):
         buy_score += 1.5
-    if detect_break_and_retest(df.iloc[:-1], "sell", supply_zones, sma50, ema200):
+    if detect_break_and_retest(df.iloc[:-1], "sell", supply_zones, sma50, ema200, config["pip_value"]):
         sell_score += 1.5
 
     # 4.6 StochRSI Trigger
@@ -1468,7 +1490,7 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     if stoch_k > stoch_d and prev_k <= prev_d and stoch_k < 20: buy_score += 2.0
     if stoch_k < stoch_d and prev_k >= prev_d and stoch_k > 80: sell_score += 2.0
 
-    log.debug(f"Current Scores - BUY: {buy_score}/10 | SELL: {sell_score}/10")
+    log.debug(f"Current Scores for {symbol} - BUY: {buy_score}/10 | SELL: {sell_score}/10")
 
     # ── 5. Direct Trigger Evaluation ─────────────────────────────────────────
     # Buy Setup: VWAP bias (price > vwap) + StochRSI cross + Demand Zone + Trend verification (SMA50 & EMA200)
@@ -1481,28 +1503,28 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
     if (buy_score >= 6.5 and buy_score > sell_score) or direct_buy:
         direction = "buy"
         trigger_type = "DIRECT TRIGGER" if direct_buy else f"SCORE SYSTEM ({buy_score}/10)"
-        log.info(f"🎯 BUY SETUP: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
+        log.info(f"🎯 BUY SETUP for {symbol}: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
     elif (sell_score >= 6.5 and sell_score > buy_score) or direct_sell:
         direction = "sell"
         trigger_type = "DIRECT TRIGGER" if direct_sell else f"SCORE SYSTEM ({sell_score}/10)"
-        log.info(f"🎯 SELL SETUP: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
+        log.info(f"🎯 SELL SETUP for {symbol}: {trigger_type} triggered trade. price={price:.5f} | vwap={vwap:.5f} | StochRSI={stoch_k:.1f}")
 
     # ── 6. IA Sentiment Filter validation ────────────────────────────────────
     if direction in ("buy", "sell"):
         if sentiment_filter.enabled:
-            log.info("Analyzing market sentiment with Gemini...")
-            sentiment_score = sentiment_filter.get_market_bias()
+            log.info(f"Analyzing market sentiment for {symbol} with Gemini...")
+            sentiment_score = sentiment_filter.get_market_bias(symbol)
             
             if direction == "buy" and sentiment_score < -0.2:
-                log.warning(f"🚫 Technical BUY setup ignored: Bearish market sentiment (Score: {sentiment_score})")
-                telegram_notifier.send_message(f"⚠️ *Trade BUY annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Baissier)")
+                log.warning(f"🚫 Technical BUY setup for {symbol} ignored: Bearish market sentiment (Score: {sentiment_score})")
+                telegram_notifier.send_message(f"⚠️ *Trade BUY sur {symbol} annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Baissier)")
                 return None, 0.0, None
             if direction == "sell" and sentiment_score > 0.2:
-                log.warning(f"🚫 Technical SELL setup ignored: Bullish market sentiment (Score: {sentiment_score})")
-                telegram_notifier.send_message(f"⚠️ *Trade SELL annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Haussier)")
+                log.warning(f"🚫 Technical SELL setup for {symbol} ignored: Bullish market sentiment (Score: {sentiment_score})")
+                telegram_notifier.send_message(f"⚠️ *Trade SELL sur {symbol} annulé par IA Sentiment*\nScore: `{sentiment_score:.2f}` (Biais Haussier)")
                 return None, 0.0, None
                 
-            log.info(f"✅ Trade validated by Sentiment Filter! Score = {sentiment_score}")
+            log.info(f"✅ Trade {symbol} validated by Sentiment Filter! Score = {sentiment_score}")
         else:
             log.debug("Sentiment filter is disabled (No API key). Skipping sentiment validation.")
 
@@ -1516,25 +1538,26 @@ def evaluate_signal() -> Tuple[Optional[str], float, Optional[str]]:
 
 def run():
     log.info("═" * 70)
-    log.info("  GBPUSD SCALPING BOT — Starting up")
+    log.info("  VIBE TRADING MULTI-SYMBOL BOT — Starting up")
     log.info("═" * 70)
 
     # Welcome message on Telegram
-    telegram_notifier.send_message("🟢 *Vibe Trading Bot* démarré avec succès ! Surveillance active sur GBP/USD.")
+    telegram_notifier.send_message("🟢 *Vibe Trading Bot* démarré avec succès ! Surveillance active sur GBP/USD et GOLD (XAUUSD).")
 
     if not mt5_connect():
         log.error("Failed to connect to MT5. Exiting.")
         telegram_notifier.send_message("❌ *ERREUR CRITIQUE :* Impossible de se connecter au terminal MetaTrader 5 !")
         return
 
-    # Ensure symbol is available
-    if not mt5.symbol_select(SYMBOL, True):
-        log.error(f"Cannot select symbol {SYMBOL}.")
-        telegram_notifier.send_message(f"❌ *ERREUR CRITIQUE :* Impossible de sélectionner le symbole {SYMBOL} sur MT5 !")
-        mt5.shutdown()
-        return
+    # Ensure symbols are available
+    for symbol, config in SYMBOLS_CONFIG.items():
+        if not mt5.symbol_select(symbol, True):
+            log.error(f"Cannot select symbol {symbol}.")
+            telegram_notifier.send_message(f"❌ *ERREUR CRITIQUE :* Impossible de sélectionner le symbole {symbol} sur MT5 !")
+            mt5.shutdown()
+            return
+        log.info(f"Symbol: {symbol} | Risk: {RISK_PERCENT}% | ATR SL Multiplier: {ATR_SL_MULTIPLIER}x | Risk/Reward: {RISK_REWARD_RATIO}x")
 
-    log.info(f"Symbol: {SYMBOL} | Risk: {RISK_PERCENT}% | ATR SL Multiplier: {ATR_SL_MULTIPLIER}x | Risk/Reward: {RISK_REWARD_RATIO}x")
     log.info(f"Session: {SESSION_START_HOUR:02d}:00–{SESSION_END_HOUR:02d}:00 ({TIMEZONE})")
     log.info("Polling every 10 seconds...")
     log.info("═" * 70)
@@ -1598,28 +1621,29 @@ def run():
                 time.sleep(60)
                 continue
 
-            # ── Open position gate ───────────────────────────────────────────
-            open_pos = get_open_position(MAGIC_NUMBER)
-            if open_pos is not None:
-                log.debug(f"Position already open: {open_pos.ticket}. Waiting for close.")
-                time.sleep(POLL_INTERVAL)
-                continue
+            # Loop over configured symbols to check signals and open trades
+            for symbol, config in SYMBOLS_CONFIG.items():
+                # ── Open position gate ───────────────────────────────────────────
+                open_pos = get_open_position(symbol, config["magic_number"])
+                if open_pos is not None:
+                    log.debug(f"Position already open for {symbol}: {open_pos.ticket}. Waiting for close.")
+                    continue
 
-            # ── Signal evaluation ────────────────────────────────────────────
-            signal, atr, trigger_type = evaluate_signal()
+                # ── Signal evaluation ────────────────────────────────────────────
+                signal, atr, trigger_type = evaluate_signal(symbol, config)
 
-            if signal in ("buy", "sell"):
-                if place_order_for_all_users(signal, atr, trigger_type):
-                    sl_p = atr * ATR_SL_MULTIPLIER / PIP_VALUE
-                    tp_p = sl_p * RISK_REWARD_RATIO
-                    telegram_notifier.send_message(
-                        f"🚀 *Trade {signal.upper()} ouvert avec succès sur GBP/USD !*\n"
-                        f"SL: `{sl_p:.1f}` pips | TP: `{tp_p:.1f}` pips\n"
-                        f"Stratégie: `{trigger_type}`"
-                    )
-                    last_trade_time = current_time
-                else:
-                    telegram_notifier.send_message(f"❌ *Erreur de transaction :* Signal {signal.upper()} détecté mais l'ordre n'a pas pu être placé sur les comptes.")
+                if signal in ("buy", "sell"):
+                    if place_order_for_all_users(symbol, signal, atr, trigger_type, config):
+                        sl_p = atr * ATR_SL_MULTIPLIER / config["pip_value"]
+                        tp_p = sl_p * RISK_REWARD_RATIO
+                        telegram_notifier.send_message(
+                            f"🚀 *Trade {signal.upper()} ouvert avec succès sur {symbol} !*\n"
+                            f"SL: `{sl_p:.1f}` pips | TP: `{tp_p:.1f}` pips\n"
+                            f"Stratégie: `{trigger_type}`"
+                        )
+                        last_trade_time = current_time
+                    else:
+                        telegram_notifier.send_message(f"❌ *Erreur de transaction :* Signal {signal.upper()} détecté sur {symbol} mais l'ordre n'a pas pu être placé sur les comptes.")
 
             time.sleep(POLL_INTERVAL)
 
